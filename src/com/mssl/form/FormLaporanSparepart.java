@@ -118,6 +118,9 @@ public class FormLaporanSparepart extends Form {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16)); 
         } catch (Exception e) {}
         
+        // --- TAMBAHAN FITUR ENTER PENCARIAN ---
+        txtSearch.addActionListener(e -> loadDataSparepart());
+
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { if (!isRefreshing) loadDataSparepart(); }
             public void removeUpdate(DocumentEvent e) { if (!isRefreshing) loadDataSparepart(); }
@@ -164,7 +167,8 @@ public class FormLaporanSparepart extends Form {
         p.setBackground(CARD_BG_COLOR);
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20");
 
-        String[] columns = {"Kode", "Nama Sparepart", "Kategori", "Stok", "Harga Modal", "Harga Jual"};
+        // PERBAIKAN: Menambah kolom No. Urut
+        String[] columns = {"No.", "Kode", "Nama Sparepart", "Kategori", "Stok", "Harga Modal", "Harga Jual"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -186,12 +190,13 @@ public class FormLaporanSparepart extends Form {
         header.setBackground(TABLE_HEADER_BG);
         header.setForeground(SIDEBAR_MAIN_COLOR);
 
-        tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(100); 
-        tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(250); 
-        tableSparepart.getColumnModel().getColumn(2).setPreferredWidth(150); 
-        tableSparepart.getColumnModel().getColumn(3).setPreferredWidth(80);  
-        tableSparepart.getColumnModel().getColumn(4).setPreferredWidth(150); 
-        tableSparepart.getColumnModel().getColumn(5).setPreferredWidth(150); 
+        tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(50);  // No
+        tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(100); // Kode
+        tableSparepart.getColumnModel().getColumn(2).setPreferredWidth(250); // Nama
+        tableSparepart.getColumnModel().getColumn(3).setPreferredWidth(150); // Kategori
+        tableSparepart.getColumnModel().getColumn(4).setPreferredWidth(80);  // Stok
+        tableSparepart.getColumnModel().getColumn(5).setPreferredWidth(150); // Modal
+        tableSparepart.getColumnModel().getColumn(6).setPreferredWidth(150); // Jual
 
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
@@ -199,15 +204,16 @@ public class FormLaporanSparepart extends Form {
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         tableSparepart.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
-        tableSparepart.getColumnModel().getColumn(2).setCellRenderer(topLeftRenderer);
-        tableSparepart.getColumnModel().getColumn(4).setCellRenderer(topLeftRenderer);
+        tableSparepart.getColumnModel().getColumn(1).setCellRenderer(topLeftRenderer);
+        tableSparepart.getColumnModel().getColumn(3).setCellRenderer(topLeftRenderer);
         tableSparepart.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
+        tableSparepart.getColumnModel().getColumn(6).setCellRenderer(topLeftRenderer);
 
         WrapTextRenderer textWrapper = new WrapTextRenderer();
-        tableSparepart.getColumnModel().getColumn(1).setCellRenderer(textWrapper);
+        tableSparepart.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
 
         StockRenderer stockRenderer = new StockRenderer();
-        tableSparepart.getColumnModel().getColumn(3).setCellRenderer(stockRenderer);
+        tableSparepart.getColumnModel().getColumn(4).setCellRenderer(stockRenderer);
 
         ((DefaultTableCellRenderer) tableSparepart.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -243,7 +249,7 @@ public class FormLaporanSparepart extends Form {
         } catch(Exception e){}
 
         btnEkspor.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Fitur Ekspor Laporan (Excel/PDF) sedang dalam pengembangan.");
+            tampilkanNotif("Info Pengembangan", "Fitur Ekspor Laporan (Excel/PDF) sedang dalam tahap pengembangan.", "warning");
         });
 
         p.add(btnEkspor, "height 45!");
@@ -298,6 +304,7 @@ public class FormLaporanSparepart extends Form {
                     }
                     
                     try (ResultSet res = ps.executeQuery()) {
+                        int no = 1;
                         while (res.next()) {
                             String kode = "SPR-" + res.getInt("id_sparepart");
                             String nama = res.getString("nama_sparepart");
@@ -308,13 +315,13 @@ public class FormLaporanSparepart extends Form {
                             
                             String strModal = formatRupiah.format(modal).replace(",00", "");
                             String strJual = formatRupiah.format(jual).replace(",00", "");
-                            String strStok = stok + " Pcs";
+                            String strStok = String.valueOf(stok);
 
                             totalJenis++;
                             if (stok <= 5) totalMenipis++;
                             totalAset += (stok * modal); 
 
-                            publish(new Object[]{kode, nama, kat, strStok, strModal, strJual});
+                            publish(new Object[]{no++, kode, nama, kat, strStok, strModal, strJual});
                         }
                     }
                 }
@@ -338,11 +345,39 @@ public class FormLaporanSparepart extends Form {
                     lblTotalAset.setText(formatRupiah.format(totalAset).replace(",00", ""));
                     
                 } catch (Exception e) {
-                    System.err.println("Error Load Data Sparepart: " + e.getMessage());
+                    tampilkanNotif("Database Error", "Gagal memuat data dari database: " + e.getMessage(), "error");
                 }
             }
         };
         worker.execute();
+    }
+    
+    // =========================================================
+    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
+    // =========================================================
+    private void tampilkanNotif(String title, String message, String type) {
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
+        
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        
+        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
+        
+        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
+        
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
+        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
+
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
 
     class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {

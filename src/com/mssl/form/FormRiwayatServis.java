@@ -6,6 +6,7 @@ import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.NumberFormat;
@@ -127,7 +128,7 @@ public class FormRiwayatServis extends Form {
         p.setBackground(CARD_BG_COLOR);
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20");
 
-        String[] columns = {"ID Nota", "Tgl Selesai", "Pelanggan", "Perangkat", "Status Bayar", "Garansi", "Total Biaya"};
+        String[] columns = {"No.", "ID Nota", "Tgl Masuk", "Tgl Selesai", "Tgl Diambil", "Pelanggan", "Perangkat", "Status Bayar", "Garansi", "Total Biaya"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -149,28 +150,29 @@ public class FormRiwayatServis extends Form {
         header.setBackground(TABLE_HEADER_BG);
         header.setForeground(SIDEBAR_MAIN_COLOR);
         
-        tableRiwayat.getColumnModel().getColumn(0).setPreferredWidth(90);  
-        tableRiwayat.getColumnModel().getColumn(1).setPreferredWidth(110); 
-        tableRiwayat.getColumnModel().getColumn(2).setPreferredWidth(200); 
-        tableRiwayat.getColumnModel().getColumn(3).setPreferredWidth(180); 
-        tableRiwayat.getColumnModel().getColumn(4).setPreferredWidth(110); 
-        tableRiwayat.getColumnModel().getColumn(5).setPreferredWidth(110); 
-        tableRiwayat.getColumnModel().getColumn(6).setPreferredWidth(140); 
+        tableRiwayat.getColumnModel().getColumn(0).setPreferredWidth(50);
+        tableRiwayat.getColumnModel().getColumn(1).setPreferredWidth(90);
+        tableRiwayat.getColumnModel().getColumn(2).setPreferredWidth(100);
+        tableRiwayat.getColumnModel().getColumn(3).setPreferredWidth(100);
+        tableRiwayat.getColumnModel().getColumn(4).setPreferredWidth(100);
+        tableRiwayat.getColumnModel().getColumn(5).setPreferredWidth(180);
+        tableRiwayat.getColumnModel().getColumn(6).setPreferredWidth(150);
+        tableRiwayat.getColumnModel().getColumn(9).setPreferredWidth(140);
 
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
         topLeftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        tableRiwayat.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
-        tableRiwayat.getColumnModel().getColumn(1).setCellRenderer(topLeftRenderer);
-        tableRiwayat.getColumnModel().getColumn(4).setCellRenderer(topLeftRenderer);
-        tableRiwayat.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
-        tableRiwayat.getColumnModel().getColumn(6).setCellRenderer(topLeftRenderer);
+        for(int i=0; i<tableRiwayat.getColumnCount(); i++) {
+            if(i != 5 && i != 6) {
+                tableRiwayat.getColumnModel().getColumn(i).setCellRenderer(topLeftRenderer);
+            }
+        }
 
         WrapTextRenderer textWrapper = new WrapTextRenderer();
-        tableRiwayat.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
-        tableRiwayat.getColumnModel().getColumn(3).setCellRenderer(textWrapper);
+        tableRiwayat.getColumnModel().getColumn(5).setCellRenderer(textWrapper); 
+        tableRiwayat.getColumnModel().getColumn(6).setCellRenderer(textWrapper); 
 
         ((DefaultTableCellRenderer) tableRiwayat.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -222,7 +224,7 @@ public class FormRiwayatServis extends Form {
 
         btnDetail.addActionListener(e -> bukaDetailNota());
         btnExport.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Fitur Ekspor (Excel/PDF) sedang dalam pengembangan.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            tampilkanNotif("Info Pengembangan", "Fitur Ekspor (Excel/PDF) sedang dalam tahap pengembangan.", "warning");
         });
 
         p.add(btnDetail, "height 45!");
@@ -234,12 +236,12 @@ public class FormRiwayatServis extends Form {
         try {
             int row = tableRiwayat.getSelectedRow();
             if(row == -1) {
-                JOptionPane.showMessageDialog(this, "Pilih salah satu baris di tabel terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+                tampilkanNotif("Peringatan", "Pilih salah satu baris di tabel terlebih dahulu!", "warning");
                 return;
             }
             
             int modelRow = tableRiwayat.convertRowIndexToModel(row);
-            String idNota = tableModel.getValueAt(modelRow, 0).toString();
+            String idNota = tableModel.getValueAt(modelRow, 1).toString();
             
             Window window = SwingUtilities.getWindowAncestor(this);
             JFrame mainFrame = null;
@@ -247,12 +249,13 @@ public class FormRiwayatServis extends Form {
                 mainFrame = (JFrame) window;
             }
             
+            // Perbaikan: Panggil Dialog Detail Nota menggunakan ID Nota terpilih
             DialogDetailNota dialogDetail = new DialogDetailNota(mainFrame, idNota);
             dialogDetail.setVisible(true);
             
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Gagal membuka detail nota: " + ex.getMessage(), "Error UI", JOptionPane.ERROR_MESSAGE);
+            tampilkanNotif("Error UI", "Gagal membuka detail nota: " + ex.getMessage(), "error");
         }
     }
 
@@ -261,20 +264,20 @@ public class FormRiwayatServis extends Form {
 
         String keyword = txtSearch.getText().trim();
         if (!keyword.isEmpty()) {
-            filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 2));
+            filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 1, 5)); 
         }
 
         String bayar = cbFilterBayar.getSelectedItem() != null ? cbFilterBayar.getSelectedItem().toString() : "Semua Pembayaran";
         if (!bayar.equals("Semua Pembayaran")) {
-            filters.add(RowFilter.regexFilter("(?i)^" + java.util.regex.Pattern.quote(bayar) + "$", 4));
+            filters.add(RowFilter.regexFilter("(?i)^" + java.util.regex.Pattern.quote(bayar) + "$", 7));
         }
 
         String garansi = cbFilterGaransi.getSelectedItem() != null ? cbFilterGaransi.getSelectedItem().toString() : "Semua Garansi";
         if (!garansi.equals("Semua Garansi")) {
             if (garansi.equals("Tidak Garansi")) {
-                filters.add(RowFilter.regexFilter("(?i)^Tidak Garansi$", 5));
+                filters.add(RowFilter.regexFilter("(?i)^Tidak Garansi$", 8));
             } else if (garansi.equals("Bergaransi")) {
-                filters.add(RowFilter.notFilter(RowFilter.regexFilter("(?i)^Tidak Garansi$", 5)));
+                filters.add(RowFilter.notFilter(RowFilter.regexFilter("(?i)^Tidak Garansi$", 8)));
             }
         }
 
@@ -291,38 +294,49 @@ public class FormRiwayatServis extends Form {
         javax.swing.SwingWorker<Void, Object[]> worker = new javax.swing.SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // UPDATE: Mengambil data gabungan (Termasuk yang Batal)
-                String sql = "SELECT s.id_servis, n.tanggal_selesai, p.nama_pelanggan, " +
+                // UPDATE: Query menggunakan JOIN yang sudah dibersihkan dari id_sparepart
+                // dan hanya menampilkan status 'Diambil' atau 'Batal'
+                String sql = "SELECT s.id_servis, DATE_FORMAT(s.tgl_masuk, '%Y-%m-%d') AS tgl_masuk, " +
+                             "n.tanggal_selesai, pg.tgl_ambil, p.nama_pelanggan, " +
                              "pr.merek, pr.tipe_model, s.status AS status_servis, " +
                              "n.status_pembayaran, n.masa_garansi, n.total_biaya " +
                              "FROM data_servis_lengkap s " +
                              "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
                              "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
                              "LEFT JOIN tb_nota n ON n.id_servis = s.id_servis " +
-                             "WHERE s.status IN ('Selesai', 'Batal') " +
-                             "ORDER BY s.id_servis DESC";
+                             "LEFT JOIN data_pengambilan pg ON s.id_servis = pg.id_servis " +
+                             "WHERE s.status IN ('Diambil', 'Batal') " + 
+                             "ORDER BY pg.tgl_ambil DESC";
 
                 java.sql.Connection conn = DatabaseConnection.getKoneksi();
                 NumberFormat formatRupiah = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
 
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     try (ResultSet res = ps.executeQuery()) {
+                        int no = 1;
                         while (res.next()) {
                             String id = "N" + String.format("%05d", res.getInt("id_servis"));
                             String statusServis = res.getString("status_servis");
                             
-                            // TANGGAL SELESAI
-                            String tgl = res.getString("tanggal_selesai");
+                            String tglM = res.getString("tgl_masuk") != null ? res.getString("tgl_masuk") : "-";
+                            
+                            String tglS = res.getString("tanggal_selesai");
                             if (statusServis.equalsIgnoreCase("Batal")) {
-                                tgl = "Dibatalkan";
-                            } else if(tgl == null || tgl.isEmpty()) {
-                                tgl = "Belum Selesai";
+                                tglS = "Dibatalkan";
+                            } else if(tglS == null || tglS.isEmpty()) {
+                                tglS = "Belum Selesai";
+                            }
+                            
+                            String tglA = res.getString("tgl_ambil");
+                            if (statusServis.equalsIgnoreCase("Batal")) {
+                                tglA = "Dibatalkan";
+                            } else if(tglA == null || tglA.isEmpty()) {
+                                tglA = "Belum Diambil";
                             }
                             
                             String nama = res.getString("nama_pelanggan");
                             String hp = res.getString("merek") + " " + res.getString("tipe_model");
                             
-                            // STATUS PEMBAYARAN
                             String statBayar = res.getString("status_pembayaran");
                             if(statusServis.equalsIgnoreCase("Batal")) {
                                 statBayar = "Dibatalkan";
@@ -330,7 +344,6 @@ public class FormRiwayatServis extends Form {
                                 statBayar = "Belum Lunas";
                             }
                             
-                            // MASA GARANSI
                             String garansi = res.getString("masa_garansi");
                             if(statusServis.equalsIgnoreCase("Batal")) {
                                 garansi = "-";
@@ -338,11 +351,10 @@ public class FormRiwayatServis extends Form {
                                 garansi = "Tidak Garansi";
                             }
                             
-                            // TOTAL BIAYA
                             double biayaDb = res.getDouble("total_biaya");
                             String biaya = statusServis.equalsIgnoreCase("Batal") ? "Rp 0" : formatRupiah.format(biayaDb).replace(",00", "");
 
-                            publish(new Object[]{id, tgl, nama, hp, statBayar, garansi, biaya});
+                            publish(new Object[]{no++, id, tglM, tglS, tglA, nama, hp, statBayar, garansi, biaya});
                         }
                     }
                 }
@@ -362,11 +374,36 @@ public class FormRiwayatServis extends Form {
                     get(); 
                     applyFilters(); 
                 } catch (Exception e) {
-                    System.err.println("Error Load Data Tabel Riwayat: " + e.getMessage());
+                    tampilkanNotif("Database Error", "Gagal memuat tabel riwayat: " + e.getMessage(), "error");
                 }
             }
         };
         worker.execute();
+    }
+    
+    private void tampilkanNotif(String title, String message, String type) {
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
+        
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        
+        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
+        
+        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
+        
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
+        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
+
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
 
     class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {

@@ -15,6 +15,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
 import net.miginfocom.swing.MigLayout;
+import java.sql.Statement;
 
 public class FormPengambilan extends Form {
 
@@ -62,15 +63,15 @@ public class FormPengambilan extends Form {
             loadDataTabel(); 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Terjadi kesalahan saat memuat Form: " + e.getMessage(), "Error UI", JOptionPane.ERROR_MESSAGE);
+            tampilkanNotif("Error UI", "Terjadi kesalahan saat memuat Form: " + e.getMessage(), "error");
         }
     }
 
     private void init() {
-        // PERBAIKAN: Lebar panel kiri diperbesar menjadi 460! agar isinya tidak terpotong
         setLayout(new MigLayout("fill, insets 25 30 25 30, gap 25", "[460!][fill,grow]", "[fill,grow]"));
         setBackground(APP_BG_COLOR);
 
+        // 1. PANEL KIRI (DETAIL TRANSAKSI)
         JPanel panelBayar = new JPanel(new MigLayout("wrap, fillx, insets 20 25 20 25", "[fill]", "[]15[]5[]15[]5[]15[]5[]15[]5[]15[]5[]15[]5[]15[]5[]25[]"));
         panelBayar.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#ffffff");
 
@@ -116,11 +117,10 @@ public class FormPengambilan extends Form {
         
         JScrollPane scrollListSp = new JScrollPane(listSparepart);
         scrollListSp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER); 
-        scrollListSp.putClientProperty(FlatClientProperties.STYLE, "arc:10");
-        scrollListSp.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        scrollListSp.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 235)));
 
         txtJasa = new JTextField("0"); 
-        txtJasa.putClientProperty(FlatClientProperties.STYLE, "arc:10"); 
+        txtJasa.putClientProperty(FlatClientProperties.STYLE, "arc:10; font:bold +2"); 
         txtJasa.putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
         txtJasa.addKeyListener(new KeyAdapter() { 
             public void keyTyped(KeyEvent evt) { if (!Character.isDigit(evt.getKeyChar())) evt.consume(); } 
@@ -150,29 +150,22 @@ public class FormPengambilan extends Form {
         Font fL = new Font("Segoe UI", Font.BOLD, 12);
         
         panelBayar.add(lblTitle, "gapbottom 10");
-        
-        JLabel lbl1 = new JLabel("ID SERVIS"); lbl1.setFont(fL); lbl1.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl1); panelBayar.add(txtIdServis, "h 38!");
-        
-        JLabel lbl2 = new JLabel("NAMA PELANGGAN"); lbl2.setFont(fL); lbl2.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl2); panelBayar.add(txtNama, "h 38!");
-        
-        JLabel lbl3 = new JLabel("PERANGKAT"); lbl3.setFont(fL); lbl3.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl3); panelBayar.add(txtPerangkat, "h 38!");
+        panelBayar.add(new JLabel("ID SERVIS") {{ setFont(fL); setForeground(TEXT_MUTED); }}); panelBayar.add(txtIdServis, "h 38!");
+        panelBayar.add(new JLabel("NAMA PELANGGAN") {{ setFont(fL); setForeground(TEXT_MUTED); }}); panelBayar.add(txtNama, "h 38!");
+        panelBayar.add(new JLabel("PERANGKAT") {{ setFont(fL); setForeground(TEXT_MUTED); }}); panelBayar.add(txtPerangkat, "h 38!");
         
         JSeparator sep = new JSeparator();
         sep.setForeground(new Color(230, 230, 235));
-        panelBayar.add(sep, "growx, gapy 15 15"); // Diberi growx agar full lebar
+        panelBayar.add(sep, "growx, gapy 15 15"); 
         
-        JLabel lbl4 = new JLabel("TAMBAH SPAREPART (CARI & ISI JUMLAH)"); lbl4.setFont(fL); lbl4.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl4); 
+        panelBayar.add(new JLabel("TAMBAH SPAREPART (CARI & ISI JUMLAH)") {{ setFont(fL); setForeground(TEXT_MUTED); }}); 
         
         JPanel pnlPilihSp = new JPanel(new MigLayout("insets 0", "[grow, fill][]", "[]"));
         pnlPilihSp.setOpaque(false);
         pnlPilihSp.add(txtSpTerpilih, "h 38!");
         pnlPilihSp.add(btnCariSp, "w 45!, h 38!");
         panelBayar.add(pnlPilihSp);
-        
+
         JPanel pnlAksiSp = new JPanel(new MigLayout("insets 0, gapx 8", "[][70!][grow, fill][fill][fill]", "[]"));
         pnlAksiSp.setOpaque(false);
         pnlAksiSp.add(new JLabel("Jumlah:"));
@@ -184,27 +177,23 @@ public class FormPengambilan extends Form {
         
         panelBayar.add(scrollListSp, "h 90!");
 
-        JLabel lbl5 = new JLabel("BIAYA JASA (Rp)"); lbl5.setFont(fL); lbl5.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl5); panelBayar.add(txtJasa, "h 38!");
+        panelBayar.add(new JLabel("BIAYA JASA (Rp)") {{ setFont(fL); setForeground(TEXT_MUTED); }}, "gapy 10"); panelBayar.add(txtJasa, "h 38!");
+        panelBayar.add(new JLabel("MASA GARANSI") {{ setFont(fL); setForeground(TEXT_MUTED); }}); panelBayar.add(cbGaransi, "h 38!");
+        panelBayar.add(new JLabel("METODE PEMBAYARAN") {{ setFont(fL); setForeground(TEXT_MUTED); }}); panelBayar.add(cbMetode, "h 38!");
         
-        JLabel lbl6 = new JLabel("MASA GARANSI"); lbl6.setFont(fL); lbl6.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl6); panelBayar.add(cbGaransi, "h 38!");
-
-        JLabel lbl7 = new JLabel("METODE PEMBAYARAN"); lbl7.setFont(fL); lbl7.setForeground(TEXT_MUTED);
-        panelBayar.add(lbl7); panelBayar.add(cbMetode, "h 38!");
-        
-        JLabel lbl8 = new JLabel("TOTAL BAYAR"); lbl8.setFont(new Font("Segoe UI", Font.BOLD, 14)); lbl8.setForeground(SIDEBAR_MAIN_COLOR);
-        panelBayar.add(lbl8, "gapy 15"); 
+        panelBayar.add(new JLabel("TOTAL BAYAR") {{ setFont(new Font("Segoe UI", Font.BOLD, 14)); setForeground(SIDEBAR_MAIN_COLOR); }}, "gapy 15"); 
         panelBayar.add(txtTotal, "h 70!"); 
         panelBayar.add(btnBayar, "h 45!, gapy 15");
 
         JScrollPane scrollKiri = createCustomScroll(panelBayar);
-        
-        // TABEL DATA NOTA SELESAI
+
+        // =========================================================
+        // 2. PANEL KANAN (TABEL UNIT SIAP DIAMBIL)
+        // =========================================================
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
         panelData.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#ffffff");
 
-        JPanel pHeaderTable = new JPanel(new MigLayout("insets 0, fillx", "[][grow][][]", "[]")); 
+        JPanel pHeaderTable = new JPanel(new MigLayout("insets 0, fillx", "[][grow, right][]", "[]")); 
         pHeaderTable.setOpaque(false);
 
         JPanel pnlTitleData = new JPanel(new MigLayout("wrap, insets 0, gapy 0", "[fill]", "[][]"));
@@ -231,20 +220,24 @@ public class FormPengambilan extends Form {
         btnRefresh.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#282d3c; foreground:#ffffff; font:bold; margin:0,15,0,15; borderWidth:0; focusWidth:0");
 
         pHeaderTable.add(pnlTitleData); 
-        pHeaderTable.add(new JLabel(""), "grow"); 
         pHeaderTable.add(txtSearch, "wmin 100, wmax 200, growx, h 38!"); 
         pHeaderTable.add(btnRefresh, "h 38!");
 
-        tableModel = new DefaultTableModel(new String[]{"ID Servis", "Pelanggan", "Perangkat", "Status"}, 0) { 
+        tableModel = new DefaultTableModel(new String[]{"No.", "ID Nota", "Pelanggan", "Perangkat", "Status", "ID_Asli"}, 0) { 
             @Override public boolean isCellEditable(int r, int c) { return false; } 
         };
         table = new JTable(tableModel); 
         styleTable(table);
         
-        table.getColumnModel().getColumn(0).setMaxWidth(90);
-        table.getColumnModel().getColumn(1).setPreferredWidth(180);
-        table.getColumnModel().getColumn(2).setPreferredWidth(150);
-        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        table.getColumnModel().getColumn(0).setMaxWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(90);
+        table.getColumnModel().getColumn(2).setPreferredWidth(180);
+        table.getColumnModel().getColumn(3).setPreferredWidth(150);
+        table.getColumnModel().getColumn(4).setPreferredWidth(100);
+        
+        table.getColumnModel().getColumn(5).setMinWidth(0); 
+        table.getColumnModel().getColumn(5).setMaxWidth(0); 
+        table.getColumnModel().getColumn(5).setWidth(0);
 
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
@@ -252,14 +245,13 @@ public class FormPengambilan extends Form {
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         table.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
-        table.getColumnModel().getColumn(3).setCellRenderer(topLeftRenderer);
+        table.getColumnModel().getColumn(1).setCellRenderer(topLeftRenderer);
+        table.getColumnModel().getColumn(4).setCellRenderer(topLeftRenderer);
 
         WrapTextRenderer textWrapper = new WrapTextRenderer();
-        table.getColumnModel().getColumn(1).setCellRenderer(textWrapper); 
         table.getColumnModel().getColumn(2).setCellRenderer(textWrapper); 
+        table.getColumnModel().getColumn(3).setCellRenderer(textWrapper); 
 
-        ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-        
         rowSorter = new TableRowSorter<>(tableModel); 
         table.setRowSorter(rowSorter);
 
@@ -273,13 +265,26 @@ public class FormPengambilan extends Form {
         add(scrollKiri, "grow"); 
         add(panelData, "grow");
 
-        btnRefresh.addActionListener(e -> { loadDataTabel(); txtSearch.setText(""); });
-        table.getSelectionModel().addListSelectionListener(e -> { if (table.getSelectedRow() != -1) pilihData(); });
+        // --- LISTENERS ---
+        btnRefresh.addActionListener(e -> { 
+            txtSearch.setText(""); 
+            resetKeranjang();
+            resetForm();
+            loadDataTabel(); 
+        });
+        table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) pilihData(); });
         
         btnTambahSp.addActionListener(e -> tambahKeKeranjang());
         btnHapusSp.addActionListener(e -> hapusDariKeranjang());
         btnResetSp.addActionListener(e -> resetKeranjang());
         btnBayar.addActionListener(e -> aksiBayar());
+        
+        txtSearch.addActionListener(e -> {
+            if (table.getRowCount() > 0) {
+                table.setRowSelectionInterval(0, 0); 
+                pilihData(); 
+            }
+        });
         
         txtSearch.getDocument().addDocumentListener(new DocumentListener() { 
             public void insertUpdate(DocumentEvent e) { liveSearch(); } 
@@ -288,32 +293,8 @@ public class FormPengambilan extends Form {
         });
     }
 
-    private JTextField createReadOnly(String p) { 
-        JTextField tf = new JTextField(); 
-        tf.setEditable(false); 
-        tf.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, p);
-        tf.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#f5f6fa; foreground:#666666"); 
-        return tf; 
-    }
-    
-    private JScrollPane createCustomScroll(JPanel p) { 
-        JScrollPane s = new JScrollPane(p); 
-        s.setBorder(null); 
-        s.setOpaque(false); 
-        s.getViewport().setOpaque(false); 
-        s.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        s.getVerticalScrollBar().setUnitIncrement(15); 
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;"); 
-        return s; 
-    }
-
     private void styleTable(JTable tb) {
-        tb.setBackground(CARD_BG_COLOR);
-        tb.setForeground(new Color(60, 60, 60));
-        tb.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tb.setRowHeight(60); 
-        tb.setShowGrid(false);
-        tb.setShowHorizontalLines(true);
+        tb.setRowHeight(60); tb.setShowGrid(false); tb.setShowHorizontalLines(true);
         tb.setGridColor(new Color(230, 230, 235));
         tb.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 85%); selectionForeground:#000000; selectionArc:10");
 
@@ -322,28 +303,45 @@ public class FormPengambilan extends Form {
         header.setOpaque(false);
         header.setBackground(TABLE_HEADER_BG); 
         header.setForeground(SIDEBAR_MAIN_COLOR); 
+        ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
     }
 
     private void loadDataTabel() {
         tableModel.setRowCount(0);
+        int no = 1;
         try {
             Connection kon = DatabaseConnection.getKoneksi(); 
-            String sql = "SELECT s.id_servis, p.nama_pelanggan, pr.tipe_model, s.status FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat WHERE s.status = 'Selesai' AND s.id_servis NOT IN (SELECT id_servis FROM data_pengambilan)";
+            // PERBAIKAN: CONCAT Merek + Tipe Model
+            String sql = "SELECT s.id_servis, p.nama_pelanggan, CONCAT(pr.merek, ' ', pr.tipe_model) AS nama_perangkat, s.status " +
+                         "FROM data_servis_lengkap s " +
+                         "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
+                         "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
+                         "WHERE s.status = 'Selesai' AND s.id_servis NOT IN (SELECT id_servis FROM data_pengambilan) " +
+                         "ORDER BY s.id_servis DESC";
             ResultSet rs = kon.createStatement().executeQuery(sql);
             while (rs.next()) { 
-                tableModel.addRow(new Object[]{String.format("N%05d", rs.getInt("id_servis")), rs.getString("nama_pelanggan"), rs.getString("tipe_model"), rs.getString("status")}); 
+                tableModel.addRow(new Object[]{
+                    no++, 
+                    String.format("N%05d", rs.getInt("id_servis")), 
+                    rs.getString("nama_pelanggan"), 
+                    rs.getString("nama_perangkat"), 
+                    rs.getString("status"),
+                    rs.getInt("id_servis")
+                }); 
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void pilihData() {
         int row = table.getSelectedRow();
         if(row != -1) {
             int mR = table.convertRowIndexToModel(row); 
-            selectedId = tableModel.getValueAt(mR, 0).toString().replace("N", "");
-            txtIdServis.setText(tableModel.getValueAt(mR, 0).toString()); 
-            txtNama.setText(tableModel.getValueAt(mR, 1).toString()); 
-            txtPerangkat.setText(tableModel.getValueAt(mR, 2).toString()); 
+            selectedId = tableModel.getValueAt(mR, 5).toString(); 
+            txtIdServis.setText(tableModel.getValueAt(mR, 1).toString()); 
+            txtNama.setText(tableModel.getValueAt(mR, 2).toString()); 
+            txtPerangkat.setText(tableModel.getValueAt(mR, 3).toString()); 
             btnBayar.setEnabled(true); 
             hitungTotal();
         }
@@ -352,34 +350,53 @@ public class FormPengambilan extends Form {
     private void showModalPilihSparepart() {
         Window window = SwingUtilities.getWindowAncestor(this);
         JDialog d = new JDialog(window instanceof JFrame ? (JFrame) window : null, "Pilih Sparepart", Dialog.ModalityType.APPLICATION_MODAL);
+        d.setSize(700, 500); 
+        d.setLocationRelativeTo(this);
         
-        d.setSize(650, 500); d.setLocationRelativeTo(this);
         JPanel p = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill, grow]", "[]15[fill, grow][]"));
         p.setBackground(CARD_BG_COLOR);
         
-        JLabel lblHeader = new JLabel("Pilih Sparepart Tersedia");
-        lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 20)); lblHeader.setForeground(SIDEBAR_MAIN_COLOR);
+        JLabel lblHeader = new JLabel("Pilih Sparepart Tersedia"); 
+        lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 20)); 
+        lblHeader.setForeground(SIDEBAR_MAIN_COLOR);
         
-        JTextField tCari = new JTextField(); tCari.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Cari Nama Sparepart...");
+        JTextField tCari = new JTextField(); 
+        tCari.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Cari Nama atau Kategori...");
         tCari.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:5,10,5,10");
         
-        DefaultTableModel m = new DefaultTableModel(new String[]{"ID", "Nama Sparepart", "Stok", "Harga Jual"}, 0) { 
+        DefaultTableModel m = new DefaultTableModel(new String[]{"ID", "Nama Sparepart", "Kategori", "Stok", "Harga Jual"}, 0) { 
             @Override public boolean isCellEditable(int r, int cl) { return false; } 
         };
         JTable t = new JTable(m); 
-        t.setRowHeight(40); t.setShowGrid(false); t.setShowHorizontalLines(true); t.setGridColor(new Color(230, 230, 235));
-        t.getTableHeader().setBackground(TABLE_HEADER_BG); t.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        t.setRowHeight(40); 
+        styleTable(t);
+        TableRowSorter<DefaultTableModel> s = new TableRowSorter<>(m); t.setRowSorter(s);
         
         t.getColumnModel().getColumn(0).setMaxWidth(60); 
-        t.getColumnModel().getColumn(2).setMaxWidth(80);
-        TableRowSorter<DefaultTableModel> s = new TableRowSorter<>(m); t.setRowSorter(s);
+        t.getColumnModel().getColumn(3).setMaxWidth(80); 
+        
+        t.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                if (value instanceof Number) {
+                    value = formatRp.format(value).replace(",00", "");
+                }
+                return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            }
+        });
         
         try {
             Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT id_sparepart, nama_sparepart, stok, harga_jual FROM data_sparepart WHERE stok > 0 ORDER BY nama_sparepart ASC";
+            String sql = "SELECT id_sparepart, nama_sparepart, kategori, stok, harga_jual FROM data_sparepart WHERE stok > 0 ORDER BY nama_sparepart ASC";
             ResultSet rs = kon.createStatement().executeQuery(sql);
             while(rs.next()){ 
-                m.addRow(new Object[]{rs.getInt("id_sparepart"), rs.getString("nama_sparepart"), rs.getInt("stok"), rs.getDouble("harga_jual")}); 
+                m.addRow(new Object[]{
+                    rs.getInt("id_sparepart"), 
+                    rs.getString("nama_sparepart"), 
+                    rs.getString("kategori"), 
+                    rs.getInt("stok"), 
+                    rs.getDouble("harga_jual") 
+                }); 
             }
         } catch (Exception e) {}
         
@@ -398,17 +415,29 @@ public class FormPengambilan extends Form {
             if(row >= 0) {
                 int mRow = t.convertRowIndexToModel(row);
                 idSpTerpilih = (int) m.getValueAt(mRow, 0);
-                String nama = m.getValueAt(mRow, 1).toString();
-                stokSpTerpilih = (int) m.getValueAt(mRow, 2);
-                hargaSpTerpilih = (double) m.getValueAt(mRow, 3);
+                String namaSp = m.getValueAt(mRow, 1).toString();
+                String kategoriSp = m.getValueAt(mRow, 2).toString();
+                txtSpTerpilih.setText(namaSp + " - " + kategoriSp);
                 
-                txtSpTerpilih.setText(nama);
+                stokSpTerpilih = (int) m.getValueAt(mRow, 3); 
+                hargaSpTerpilih = (double) m.getValueAt(mRow, 4); 
+                
                 spinQty.setModel(new SpinnerNumberModel(1, 1, stokSpTerpilih, 1));
                 d.dispose();
+            } else {
+                tampilkanNotif("Info", "Pilih salah satu sparepart terlebih dahulu.", "warning");
             }
         };
+        
         bPilih.addActionListener(e -> actPilih.run());
         t.addMouseListener(new MouseAdapter() { public void mouseClicked(MouseEvent e) { if(e.getClickCount() == 2) actPilih.run(); } });
+        
+        tCari.addActionListener(e -> {
+            if (t.getRowCount() > 0) {
+                t.setRowSelectionInterval(0, 0); 
+                actPilih.run(); 
+            }
+        });
         
         p.add(lblHeader); p.add(tCari, "h 38!"); p.add(new JScrollPane(t)); p.add(bPilih);
         d.add(p); d.setVisible(true);
@@ -416,7 +445,7 @@ public class FormPengambilan extends Form {
 
     private void tambahKeKeranjang() {
         if(idSpTerpilih == -1) {
-            JOptionPane.showMessageDialog(this, "Silakan klik tombol Cari dan pilih sparepart terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            tampilkanNotif("Peringatan", "Silakan pilih sparepart terlebih dahulu!", "warning");
             return;
         }
         
@@ -445,25 +474,22 @@ public class FormPengambilan extends Form {
             listModelSp.remove(selectedIndex); 
             hitungTotal();
         } else {
-            JOptionPane.showMessageDialog(this, "Klik daftar sparepart yang ingin dihapus terlebih dahulu.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            tampilkanNotif("Info", "Pilih item di daftar yang ingin dihapus.", "warning");
         }
     }
 
     private void resetKeranjang() {
         keranjang.clear();
         listModelSp.clear();
-        
         idSpTerpilih = -1;
         txtSpTerpilih.setText("Belum ada sparepart dipilih...");
         spinQty.setModel(new SpinnerNumberModel(1, 1, 999, 1));
-        
         hitungTotal();
     }
 
     private void hitungTotal() {
         try {
             double jasa = txtJasa.getText().trim().isEmpty() ? 0 : Double.parseDouble(txtJasa.getText().trim()); 
-            
             double totalSp = 0;
             for(CartItem item : keranjang) { totalSp += item.subtotal; }
             
@@ -475,26 +501,47 @@ public class FormPengambilan extends Form {
     }
 
     private void aksiBayar() {
+        if (selectedId.isEmpty()) {
+            tampilkanNotif("Peringatan", "Pilih data servis terlebih dahulu!", "warning");
+            return;
+        }
         try {
             Connection kon = DatabaseConnection.getKoneksi(); 
             kon.setAutoCommit(false); 
-            
-            Integer firstIdSp = keranjang.isEmpty() ? 0 : keranjang.get(0).idSp;
             
             String totalStr = txtTotal.getText().replaceAll("[^0-9]", ""); 
             double totalAngka = totalStr.isEmpty() ? 0 : Double.parseDouble(totalStr) / 100;
             String idNotaBaru = "N" + String.format("%05d", Integer.parseInt(selectedId));
             
-            // MASUKKAN KE TRANSAKSI KASIR
-            PreparedStatement ps = kon.prepareStatement("INSERT INTO data_pengambilan (id_servis, tgl_ambil, id_sparepart, biaya_jasa, total_bayar, metode_bayar) VALUES (?, CURDATE(), ?, ?, ?, ?)");
-            ps.setString(1, selectedId); 
-            if (firstIdSp == 0) { ps.setNull(2, java.sql.Types.INTEGER); } else { ps.setInt(2, firstIdSp); }
-            ps.setDouble(3, Double.parseDouble(txtJasa.getText())); 
-            ps.setDouble(4, totalAngka); 
-            ps.setString(5, cbMetode.getSelectedItem().toString()); 
-            ps.executeUpdate();
+            // 1. Header (data_pengambilan)
+            String sqlKsr = "INSERT INTO data_pengambilan (id_servis, tgl_ambil, biaya_jasa, total_bayar, metode_bayar) VALUES (?, CURDATE(), ?, ?, ?)";
+            PreparedStatement psKsr = kon.prepareStatement(sqlKsr, Statement.RETURN_GENERATED_KEYS);
+            psKsr.setString(1, selectedId); 
+            psKsr.setDouble(2, Double.parseDouble(txtJasa.getText().isEmpty() ? "0" : txtJasa.getText())); 
+            psKsr.setDouble(3, totalAngka); 
+            psKsr.setString(4, cbMetode.getSelectedItem().toString()); 
+            psKsr.executeUpdate();
             
-            // MENGAMBIL SELURUH DATA LENGKAP UNTUK DIBUATKAN NOTA
+            ResultSet rsKsr = psKsr.getGeneratedKeys();
+            int idPengambilanBaru = 0;
+            if (rsKsr.next()) { idPengambilanBaru = rsKsr.getInt(1); }
+            
+            // 2. Detail & Potong Stok
+            for (CartItem item : keranjang) {
+                PreparedStatement psDet = kon.prepareStatement("INSERT INTO detail_pengambilan_sparepart (id_pengambilan, id_sparepart, qty, subtotal) VALUES (?, ?, ?, ?)");
+                psDet.setInt(1, idPengambilanBaru);
+                psDet.setInt(2, item.idSp);
+                psDet.setInt(3, item.qty);
+                psDet.setDouble(4, item.subtotal);
+                psDet.executeUpdate();
+
+                PreparedStatement psStok = kon.prepareStatement("UPDATE data_sparepart SET stok = stok - ? WHERE id_sparepart = ?"); 
+                psStok.setInt(1, item.qty); 
+                psStok.setInt(2, item.idSp); 
+                psStok.executeUpdate(); 
+            }
+            
+            // 3. Ambil data nota
             String sqlAmbil = "SELECT s.tgl_masuk, p.nama_pelanggan, p.no_whatsapp, pr.merek, pr.tipe_model, pr.kelengkapan, s.keluhan_awal, s.hasil_diagnosa, s.tindakan_perbaikan " +
                               "FROM data_servis_lengkap s " +
                               "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
@@ -505,7 +552,7 @@ public class FormPengambilan extends Form {
             ResultSet rsAmbil = psAmbil.executeQuery();
             
             if (rsAmbil.next()) {
-                // CETAK KE tb_nota AGAR BISA DILIHAT PELANGGAN
+                // 4. tb_nota
                 String sqlNota = "INSERT INTO tb_nota (id_nota, id_servis, tanggal_masuk, tanggal_selesai, nama_pelanggan, no_telepon, tipe_perangkat, kelengkapan, keluhan, diagnosa, tindakan, total_biaya, status_pembayaran, masa_garansi) VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, 'Lunas', ?)";
                 PreparedStatement psNota = kon.prepareStatement(sqlNota);
                 psNota.setString(1, idNotaBaru);
@@ -523,33 +570,18 @@ public class FormPengambilan extends Form {
                 psNota.executeUpdate();
             }
             
-            // POTONG STOK SPAREPART
-            for (CartItem item : keranjang) {
-                PreparedStatement psStok = kon.prepareStatement("UPDATE data_sparepart SET stok = stok - ? WHERE id_sparepart = ?"); 
-                psStok.setInt(1, item.qty); 
-                psStok.setInt(2, item.idSp); 
-                psStok.executeUpdate(); 
-            }
-            
-            // UPDATE STATUS JADI SELESAI
-            PreparedStatement psUpdStatus = kon.prepareStatement("UPDATE data_servis_lengkap SET status = 'Selesai' WHERE id_servis = ?");
+            // 5. Status jadi 'Diambil'
+            PreparedStatement psUpdStatus = kon.prepareStatement("UPDATE data_servis_lengkap SET status = 'Diambil' WHERE id_servis = ?");
             psUpdStatus.setString(1, selectedId);
             psUpdStatus.executeUpdate();
             
             kon.commit(); 
-            JOptionPane.showMessageDialog(this, "Pembayaran Berhasil! Nota Pelanggan diterbitkan.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
-            
-            loadDataTabel(); 
-            resetKeranjang();
-            
-            txtIdServis.setText(""); txtNama.setText(""); txtPerangkat.setText(""); 
-            txtJasa.setText("0"); txtTotal.setText("Rp 0"); 
-            cbMetode.setSelectedIndex(0); cbGaransi.setSelectedIndex(0);
-            btnBayar.setEnabled(false);
+            tampilkanNotif("Sukses!", "Pembayaran berhasil, nota diterbitkan.", "success");
+            loadDataTabel(); resetKeranjang(); resetForm();
             
         } catch (Exception e) {
             try { DatabaseConnection.getKoneksi().rollback(); } catch (Exception ex) {}
-            JOptionPane.showMessageDialog(this, "Gagal memproses pembayaran: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE); 
+            tampilkanNotif("Gagal", "Error: " + e.getMessage(), "error"); 
         }
     }
     
@@ -559,27 +591,54 @@ public class FormPengambilan extends Form {
         else rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + k)); 
     }
 
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); 
-            setOpaque(true);
-        }
+    private void tampilkanNotif(String title, String message, String type) {
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        FlatSVGIcon ic = new FlatSVGIcon("com/mssl/icon/" + (type.equals("success") ? "success.svg" : "error.svg"), 45, 45);
+        ic.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); 
+        tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
+        p.add(new JLabel(ic), "top"); p.add(tp);
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
+        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w != null) w.dispose(); });
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
+    }
 
+    private JTextField createReadOnly(String p) { 
+        JTextField tf = new JTextField(); tf.setEditable(false); 
+        tf.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, p);
+        tf.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#f5f6fa; foreground:#666666"); 
+        return tf; 
+    }
+    
+    private JScrollPane createCustomScroll(JPanel p) { 
+        JScrollPane s = new JScrollPane(p); s.setBorder(null); 
+        s.setOpaque(false); s.getViewport().setOpaque(false);
+        s.getVerticalScrollBar().setUnitIncrement(15); 
+        return s; 
+    }
+
+    private void resetForm() {
+        txtIdServis.setText(""); txtNama.setText(""); txtPerangkat.setText(""); 
+        txtJasa.setText("0"); txtTotal.setText("Rp 0"); 
+        cbMetode.setSelectedIndex(0); cbGaransi.setSelectedIndex(0); 
+        btnBayar.setEnabled(false); selectedId = "";
+    }
+
+    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
+        public WrapTextRenderer() { setLineWrap(true); setWrapStyleWord(true); setFont(new Font("Segoe UI", Font.PLAIN, 14)); setMargin(new java.awt.Insets(10, 10, 10, 10)); setOpaque(true); }
         @Override
         public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             setText(value != null ? value.toString() : "");
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
+            if (isSelected) { setBackground(table.getSelectionBackground()); setForeground(table.getSelectionForeground()); }
+            else { setBackground(table.getBackground()); setForeground(table.getForeground()); }
             return this;
         }
     }
-    
 }

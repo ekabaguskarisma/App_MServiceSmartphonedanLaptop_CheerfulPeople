@@ -111,7 +111,7 @@ public class FormPengerjaanStatus extends Form {
 
         JScrollPane scrollKiri = createCustomScroll(panelForm);
         
-        // TABEL PEKERJAAN)
+        // TABEL PEKERJAAN
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
         panelData.setBackground(CARD_BG_COLOR);
         panelData.putClientProperty(FlatClientProperties.STYLE, "arc:20");
@@ -146,7 +146,7 @@ public class FormPengerjaanStatus extends Form {
         pHeaderTable.add(txtSearch, "w 50:220, h 38!, gapright 10");
         pHeaderTable.add(btnRefresh, "h 38!"); 
 
-        // KOLOM: No, ID Nota, Pelanggan, Perangkat, Status, ID_Servis_Asli (Hidden)
+        // PERBAIKAN: Menambahkan kolom No. Urut visual di Index 0
         String[] kolom = {"No.", "ID Nota", "Pelanggan", "Perangkat", "Status", "ID_Asli"};
         tableModel = new DefaultTableModel(kolom, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
         tablePekerjaan = new JTable(tableModel);
@@ -179,7 +179,24 @@ public class FormPengerjaanStatus extends Form {
         // LISTENERS
         btnUpdate.addActionListener(e -> updateProgresServis());
         btnBersih.addActionListener(e -> resetForm());
-        btnRefresh.addActionListener(e -> { txtSearch.setText(""); loadPekerjaanAktif(); });
+        btnRefresh.addActionListener(e -> { 
+            txtSearch.setText(""); 
+            resetForm();
+            loadPekerjaanAktif(); 
+        });
+        
+        // --- TAMBAHAN FITUR ENTER: PENCARIAN ---
+        txtSearch.addActionListener(e -> {
+            if (tablePekerjaan.getRowCount() > 0) {
+                tablePekerjaan.setRowSelectionInterval(0, 0); // Sorot baris pertama
+                int modelRow = tablePekerjaan.convertRowIndexToModel(0);
+                selectedIdServis = tableModel.getValueAt(modelRow, 5).toString();
+                txtID.setText(tableModel.getValueAt(modelRow, 1).toString());
+                txtNama.setText(tableModel.getValueAt(modelRow, 2).toString());
+                txtPerangkat.setText(tableModel.getValueAt(modelRow, 3).toString());
+                loadDetailPengerjaan(selectedIdServis);
+            }
+        });
         
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + txtSearch.getText())); }
@@ -236,17 +253,25 @@ public class FormPengerjaanStatus extends Form {
     }
 
     private void tampilkanNotif(String title, String message, String type) {
-        String bgColor = (type.equals("success")) ? "#27ae60" : "#ff8200";
-        String iconName = (type.equals("success")) ? "success.svg" : "error.svg";
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
+        
         JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        
         FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
         icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        
         JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
         tp.add(new JLabel(title) {{ putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff"); }});
         tp.add(new JLabel(message) {{ putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)"); }});
+        
         p.add(new JLabel(icon), "top"); p.add(tp);
-        JButton b = new JButton("Tutup") {{ setCursor(new Cursor(Cursor.HAND_CURSOR)); putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:"+bgColor+"; font:bold; arc:10; borderWidth:0; margin:5,15,5,15"); }};
+        
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
         b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
         JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }

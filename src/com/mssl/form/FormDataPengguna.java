@@ -79,6 +79,10 @@ public class FormDataPengguna extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
+        // --- TAMBAHAN FITUR ENTER: TEKAN ENTER DI PASSWORD -> SIMPAN ---
+        txtPassword.addActionListener(e -> btnSimpan.doClick());
+        // ---------------------------------------------------------------
+        
         btnHapus = new JButton("Hapus");
         btnHapus.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnHapus.setEnabled(false);
@@ -147,6 +151,14 @@ public class FormDataPengguna extends Form {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16));
         } catch (Exception e) {}
 
+        // --- TAMBAHAN FITUR ENTER: PENCARIAN PENGGUNA ---
+        txtSearch.addActionListener(e -> {
+            if (table.getRowCount() > 0) {
+                table.setRowSelectionInterval(0, 0); // Sorot hasil pencarian
+                pilihData(); // Langsung isi ke form
+            }
+        });
+        
         btnRefresh = new JButton("Refresh Data");
         btnRefresh.setBackground(SIDEBAR_MAIN_COLOR);
         btnRefresh.setForeground(Color.WHITE);
@@ -158,7 +170,6 @@ public class FormDataPengguna extends Form {
         panelHeaderTabel.add(txtSearch, "w 50:220, h 38!, gapright 10");
         panelHeaderTabel.add(btnRefresh, "h 38!"); 
 
-        // PERBAIKAN TRIK VISUAL: Menambahkan kolom No. di depan, dan ID_Asli di belakang (nanti disembunyikan)
         String[] kolom = {"No.", "Nama Lengkap", "Username", "Hak Akses", "ID_Asli"};
         tableModel = new DefaultTableModel(kolom, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -185,7 +196,6 @@ public class FormDataPengguna extends Form {
         table.getColumnModel().getColumn(2).setPreferredWidth(150); // Username
         table.getColumnModel().getColumn(3).setPreferredWidth(120); // Hak Akses
         
-        // TRIK UTAMA: Sembunyikan kolom ID_Asli dari layar secara sempurna
         table.getColumnModel().getColumn(4).setMinWidth(0);
         table.getColumnModel().getColumn(4).setMaxWidth(0);
         table.getColumnModel().getColumn(4).setWidth(0);
@@ -221,9 +231,9 @@ public class FormDataPengguna extends Form {
         btnSimpan.addActionListener(e -> simpanAtauUpdateData());
         btnHapus.addActionListener(e -> hapusData());
         btnBersih.addActionListener(e -> bersihkanForm());
-        
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
+            bersihkanForm();
             loadDataDariDatabase();
         });
 
@@ -235,30 +245,33 @@ public class FormDataPengguna extends Form {
 
         table.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                int row = table.getSelectedRow();
-                if (row >= 0) {
-                    int modelRow = table.convertRowIndexToModel(row);
-                    
-                    // AMBIL ID DARI KOLOM KE-4
-                    selectedId = tableModel.getValueAt(modelRow, 4).toString(); 
-
-                    txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
-                    txtUsername.setText(tableModel.getValueAt(modelRow, 2).toString());
-                    cbRole.setSelectedItem(tableModel.getValueAt(modelRow, 3).toString());
-                    
-                    txtPassword.setText("");
-                    txtPassword.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "(Kosongkan jika tak diubah)");
-
-                    lblTitleForm.setText("Edit Akun");
-                    lblTitleForm.setForeground(SUCCESS_GREEN); 
-                    
-                    btnSimpan.setText("Update Akun");
-                    btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
-                    
-                    btnHapus.setEnabled(true);
-                }
+                pilihData();
             }
         });
+    }
+
+    private void pilihData() {
+        int row = table.getSelectedRow();
+        if (row >= 0) {
+            int modelRow = table.convertRowIndexToModel(row);
+            
+            selectedId = tableModel.getValueAt(modelRow, 4).toString(); 
+
+            txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
+            txtUsername.setText(tableModel.getValueAt(modelRow, 2).toString());
+            cbRole.setSelectedItem(tableModel.getValueAt(modelRow, 3).toString());
+            
+            txtPassword.setText("");
+            txtPassword.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "(Kosongkan jika tak diubah)");
+
+            lblTitleForm.setText("Edit Akun");
+            lblTitleForm.setForeground(SUCCESS_GREEN); 
+            
+            btnSimpan.setText("Update Akun");
+            btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
+            
+            btnHapus.setEnabled(true);
+        }
     }
 
     private JScrollPane createCustomScroll(JPanel p) {
@@ -269,6 +282,83 @@ public class FormDataPengguna extends Form {
         s.getVerticalScrollBar().setUnitIncrement(15);
         s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
         return s;
+    }
+    
+    // =========================================================
+    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
+    // =========================================================
+    private void tampilkanNotif(String title, String message, String type) {
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
+        
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        
+        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
+        
+        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
+        
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
+        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
+
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
+    }
+    
+    private boolean tampilkanConfirm(String title, String message) {
+        JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        internalPanel.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#e74c3c"); 
+
+        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/error.svg", 45, 45);
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        JLabel lbIcon = new JLabel(icon);
+        
+        JPanel textPanel = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]"));
+        textPanel.setOpaque(false); 
+        
+        JLabel lbTitle = new JLabel(title);
+        lbTitle.putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff");
+        JLabel lbMessage = new JLabel(message);
+        lbMessage.putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)");
+        
+        textPanel.add(lbTitle);
+        textPanel.add(lbMessage);
+        
+        internalPanel.add(lbIcon, "top, gapy 2");
+        internalPanel.add(textPanel);
+        
+        JButton btnBatal = new JButton("Batal");
+        btnBatal.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnBatal.putClientProperty(FlatClientProperties.STYLE, "background:rgba(255,255,255,0.2); foreground:#ffffff; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
+
+        JButton btnYa = new JButton("Ya, Lanjutkan");
+        btnYa.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnYa.putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:#e74c3c; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
+        
+        final boolean[] result = {false};
+
+        btnYa.addActionListener(e -> {
+            result[0] = true;
+            Window window = SwingUtilities.getWindowAncestor(btnYa);
+            if (window != null) window.dispose();
+        });
+
+        btnBatal.addActionListener(e -> {
+            result[0] = false;
+            Window window = SwingUtilities.getWindowAncestor(btnBatal);
+            if (window != null) window.dispose();
+        });
+
+        JOptionPane.showOptionDialog(this, internalPanel, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{btnBatal, btnYa}, btnBatal);
+
+        return result[0];
     }
 
     private void loadDataDariDatabase() {
@@ -305,7 +395,7 @@ public class FormDataPengguna extends Form {
         String role = cbRole.getSelectedItem().toString();
 
         if (nama.isEmpty() || username.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nama dan Username wajib diisi!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            tampilkanNotif("Peringatan", "Nama dan Username wajib diisi!", "warning");
             return;
         }
 
@@ -314,7 +404,7 @@ public class FormDataPengguna extends Form {
             
             if (selectedId.isEmpty()) {
                 if(password.isEmpty()){
-                    JOptionPane.showMessageDialog(this, "Password wajib diisi untuk akun baru!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+                    tampilkanNotif("Peringatan", "Password wajib diisi untuk akun baru!", "warning");
                     return;
                 }
                 
@@ -326,7 +416,7 @@ public class FormDataPengguna extends Form {
                 ps.setString(4, role);
                 
                 if (ps.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "Akun baru berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    tampilkanNotif("Sukses", "Akun baru berhasil ditambahkan!", "success");
                 }
             } else {
                 String sql;
@@ -349,23 +439,21 @@ public class FormDataPengguna extends Form {
                 }
 
                 if (ps.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "Data akun berhasil diperbarui!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    tampilkanNotif("Sukses", "Data akun berhasil diperbarui!", "success");
                 }
             }
             loadDataDariDatabase();
             bersihkanForm(); 
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Gagal memproses data (Mungkin Username sudah digunakan): " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+            tampilkanNotif("Error Database", "Gagal memproses data (Mungkin Username sudah digunakan): " + e.getMessage(), "error");
         }
     }
 
     private void hapusData() {
         if (selectedId.isEmpty()) return;
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus akun ini dari sistem?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        
-        if (confirm == JOptionPane.YES_OPTION) {
+        if(tampilkanConfirm("Konfirmasi Hapus", "Yakin ingin menghapus akun ini dari sistem?")) {
             try {
                 Connection kon = DatabaseConnection.getKoneksi();
                 String sql = "DELETE FROM data_pengguna WHERE id_user=?";
@@ -373,12 +461,12 @@ public class FormDataPengguna extends Form {
                 ps.setString(1, selectedId);
 
                 if (ps.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(this, "Akun berhasil dihapus!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    tampilkanNotif("Sukses", "Akun berhasil dihapus!", "success");
                     loadDataDariDatabase();
                     bersihkanForm();
                 }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Gagal menghapus data: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+                tampilkanNotif("Error Database", "Gagal menghapus data: " + e.getMessage(), "error");
             }
         }
     }

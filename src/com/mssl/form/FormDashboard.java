@@ -386,13 +386,15 @@ public class FormDashboard extends Form {
             protected Void doInBackground() throws Exception {
                 Connection kon = DatabaseConnection.getKoneksi();
 
-                // HITUNG OMZET & LABA HARI INI
-                String sqlHari = "SELECT IFNULL(SUM(p.total_bayar), 0) AS omzet, " +
-                                 "IFNULL(SUM(p.total_bayar - IFNULL(s.harga_modal, 0)), 0) AS laba, " +
-                                 "COUNT(p.id_pengambilan) AS jml " +
-                                 "FROM data_pengambilan p " +
-                                 "LEFT JOIN data_sparepart s ON p.id_sparepart = s.id_sparepart " +
-                                 "WHERE p.tgl_ambil = CURDATE()";
+                // 1. HITUNG OMZET & LABA HARI INI (SUDAH DIPERBAIKI UNTUK STRUKTUR MANY-TO-MANY)
+                String sqlHari = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, " +
+                                 "IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, " +
+                                 "COUNT(dp.id_pengambilan) AS jml " +
+                                 "FROM data_pengambilan dp " +
+                                 "LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit " +
+                                 "FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
+                                 "GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan " +
+                                 "WHERE DATE(dp.tgl_ambil) = CURDATE()";
                 ResultSet rsHari = kon.createStatement().executeQuery(sqlHari);
                 if(rsHari.next()) {
                     pendapatanHari = formatRupiah.format(rsHari.getDouble("omzet"));
@@ -400,13 +402,15 @@ public class FormDashboard extends Form {
                     subHari = "Dari " + rsHari.getInt("jml") + " transaksi hari ini";
                 }
 
-                // HITUNG OMZET & LABA BULANAN
-                String sqlBulan = "SELECT IFNULL(SUM(p.total_bayar), 0) AS omzet, " +
-                                  "IFNULL(SUM(p.total_bayar - IFNULL(s.harga_modal, 0)), 0) AS laba, " +
-                                  "COUNT(p.id_pengambilan) AS jml " +
-                                  "FROM data_pengambilan p " +
-                                  "LEFT JOIN data_sparepart s ON p.id_sparepart = s.id_sparepart " +
-                                  "WHERE DATE_FORMAT(p.tgl_ambil, '%Y-%m') = ?";
+                // 2. HITUNG OMZET & LABA BULANAN (SUDAH DIPERBAIKI UNTUK STRUKTUR MANY-TO-MANY)
+                String sqlBulan = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, " +
+                                  "IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, " +
+                                  "COUNT(dp.id_pengambilan) AS jml " +
+                                  "FROM data_pengambilan dp " +
+                                  "LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit " +
+                                  "FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
+                                  "GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan " +
+                                  "WHERE DATE_FORMAT(dp.tgl_ambil, '%Y-%m') = ?";
                 PreparedStatement psBulan = kon.prepareStatement(sqlBulan);
                 psBulan.setString(1, selectedMonthVal);
                 ResultSet rsBulan = psBulan.executeQuery();
@@ -416,39 +420,38 @@ public class FormDashboard extends Form {
                     subBulan = "Total " + rsBulan.getInt("jml") + " transaksi di " + selectedMonthDisplay;
                 }
 
-                // METRIK OPERASIONAL
-                ResultSet rsMasuk = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Proses'");
+                // 3. METRIK OPERASIONAL (Penyesuaian nama status agar akurat)
+                ResultSet rsMasuk = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Antrean'");
                 if(rsMasuk.next()) masuk = rsMasuk.getInt("c");
 
-                ResultSet rsProses = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status NOT IN ('Selesai', 'Batal', 'Proses', 'Menunggu Sparepart')");
+                ResultSet rsProses = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status NOT IN ('Selesai', 'Diambil', 'Batal', 'Antrean', 'Menunggu Sparepart')");
                 if(rsProses.next()) proses = rsProses.getInt("c");
 
                 ResultSet rsSparepart = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Menunggu Sparepart'");
                 if(rsSparepart.next()) sparepart = rsSparepart.getInt("c");
 
-                ResultSet rsSiap = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Selesai' AND id_servis NOT IN (SELECT id_servis FROM data_pengambilan)");
+                ResultSet rsSiap = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Selesai'");
                 if(rsSiap.next()) siap = rsSiap.getInt("c");
                 
-                String sqlSelesai = "SELECT COUNT(id_pengambilan) AS c FROM data_pengambilan WHERE DATE_FORMAT(tgl_ambil, '%Y-%m') = ?";
-                PreparedStatement psSelesai = kon.prepareStatement(sqlSelesai);
-                psSelesai.setString(1, selectedMonthVal);
-                ResultSet rsSelesai = psSelesai.executeQuery();
+                ResultSet rsSelesai = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Diambil'");
                 if(rsSelesai.next()) selesai = rsSelesai.getInt("c");
 
-                // TABEL ANTREAN PRIORITAS
+                // 4. TABEL ANTREAN PRIORITAS
                 tableModel.setRowCount(0); 
-                String sqlTable = "SELECT s.id_servis, p.nama_pelanggan, pr.tipe_model, s.keluhan_awal, s.status " +
-                                  "FROM data_servis_lengkap s " +
-                                  "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
-                                  "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
-                                  "WHERE s.status NOT IN ('Selesai', 'Batal') " +
-                                  "ORDER BY s.id_servis ASC LIMIT 10";
+                String sqlTable = "SELECT s.id_servis, p.nama_pelanggan, " +
+                        "CONCAT(pr.merek, ' ', pr.tipe_model) AS perangkat, " + 
+                        "s.keluhan_awal, s.status " +
+                        "FROM data_servis_lengkap s " +
+                        "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
+                        "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
+                        "WHERE s.status NOT IN ('Diambil', 'Batal') " +
+                        "ORDER BY s.tgl_masuk DESC";
                 ResultSet rsTable = kon.createStatement().executeQuery(sqlTable);
                 while (rsTable.next()) {
                     publish(new Object[]{
                         String.format("N%05d", rsTable.getInt("id_servis")),
                         rsTable.getString("nama_pelanggan"),
-                        rsTable.getString("tipe_model"),
+                        rsTable.getString("perangkat"), // TYPO SUDAH DIPERBAIKI DISINI
                         rsTable.getString("keluhan_awal"),
                         rsTable.getString("status")
                     });
@@ -485,6 +488,7 @@ public class FormDashboard extends Form {
                     
                 } catch (Exception e) {
                     System.err.println("Gagal memuat dashboard: " + e.getMessage());
+                    e.printStackTrace(); 
                 }
             }
         };

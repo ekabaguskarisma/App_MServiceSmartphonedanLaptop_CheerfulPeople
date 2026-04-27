@@ -103,6 +103,10 @@ public class FormLogin extends Form {
                 + "innerFocusWidth:0;"
                 + "font:bold 16");
 
+        // FITUR ENTER
+        txtUsername.addActionListener(e -> btnLogin.doClick());
+        txtPassword.addActionListener(e -> btnLogin.doClick());
+
         panelForm.add(lbTitleForm);
         panelForm.add(lbDescription);
         panelForm.add(lbUsername, "gapy 8");
@@ -128,8 +132,9 @@ public class FormLogin extends Form {
             try {
                 java.sql.Connection kon = com.mssl.koneksi.DatabaseConnection.getKoneksi();
                 
-                String sql = "SELECT * FROM data_pengguna WHERE username=? AND password=?";
-                java.sql.PreparedStatement ps = kon.prepareStatement(sql);
+                // 1. CEK DULU: Apakah ini Karyawan (Admin/Teknisi)?
+                String sqlAdmin = "SELECT * FROM data_pengguna WHERE username=? AND password=?";
+                java.sql.PreparedStatement ps = kon.prepareStatement(sqlAdmin);
                 ps.setString(1, user);
                 ps.setString(2, pass);
                 java.sql.ResultSet rs = ps.executeQuery();
@@ -139,15 +144,27 @@ public class FormLogin extends Form {
                     String namaLengkap = rs.getString("nama_lengkap");
                     
                     FormManager.login(role, user);
-                    
                     tampilkanNotif("Login Berhasil!", "Selamat datang, " + namaLengkap + "!", true);
                     
                 } else {
-                    tampilkanNotif("Login Gagal", "Username atau Password salah/tidak ditemukan.", false);
+                    // 2. JIKA BUKAN KARYAWAN: Cek apakah ini Pelanggan (User = No Nota, Pass = No WA)
+                    String sqlPelanggan = "SELECT s.id_servis, p.nama_pelanggan FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan WHERE CONCAT('N', LPAD(s.id_servis, 5, '0')) = ? AND p.no_whatsapp = ?";
+                    java.sql.PreparedStatement psPel = kon.prepareStatement(sqlPelanggan);
+                    psPel.setString(1, user);
+                    psPel.setString(2, pass);
+                    java.sql.ResultSet rsPel = psPel.executeQuery();
+                    
+                    if (rsPel.next()) {
+                        String namaPelanggan = rsPel.getString("nama_pelanggan");
+                        FormManager.login("Pelanggan", user); 
+                        tampilkanNotif("Akses Lacak Diberikan", "Halo Kak " + namaPelanggan + "!", true);
+                    } else {
+                        tampilkanNotif("Gagal Masuk", "Username/Nota atau Password salah.", false);
+                    }
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
-                tampilkanNotif("Error Sistem", "Terjadi kesalahan: " + ex.getMessage(), false);
+                tampilkanNotif("Error Sistem", "Terjadi kesalahan database: " + ex.getMessage(), false);
             }
         });
     }

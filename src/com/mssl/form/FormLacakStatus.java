@@ -80,6 +80,14 @@ public class FormLacakStatus extends Form {
         txtSearch.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:5,10,5,10");
         try { txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16)); } catch (Exception e) {}
 
+        // --- TAMBAHAN FITUR ENTER PADA PENCARIAN LACAK STATUS ---
+        txtSearch.addActionListener(e -> {
+            if (tableMonitoring.getRowCount() > 0) {
+                tableMonitoring.setRowSelectionInterval(0, 0); // Sorot hasil
+                bukaFormUpdate(); // Langsung buka pop-up edit progres
+            }
+        });
+
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { liveSearch(); }
             public void removeUpdate(DocumentEvent e) { liveSearch(); }
@@ -125,7 +133,8 @@ public class FormLacakStatus extends Form {
         p.setBackground(CARD_BG_COLOR);
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20");
 
-        String[] columns = {"ID Nota", "Pelanggan", "Perangkat", "Status Terakhir", "Progres"};
+        // PERBAIKAN: Menambahkan kolom No. Urut Visual
+        String[] columns = {"No.", "ID Nota", "Pelanggan", "Perangkat", "Status Terakhir", "Progres"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -146,11 +155,12 @@ public class FormLacakStatus extends Form {
         header.setBackground(TABLE_HEADER_BG);
         header.setForeground(SIDEBAR_MAIN_COLOR);
         
-        tableMonitoring.getColumnModel().getColumn(0).setPreferredWidth(100); 
-        tableMonitoring.getColumnModel().getColumn(1).setPreferredWidth(200); 
-        tableMonitoring.getColumnModel().getColumn(2).setPreferredWidth(180); 
-        tableMonitoring.getColumnModel().getColumn(3).setPreferredWidth(250); 
-        tableMonitoring.getColumnModel().getColumn(4).setPreferredWidth(100); 
+        tableMonitoring.getColumnModel().getColumn(0).setPreferredWidth(50); // No.
+        tableMonitoring.getColumnModel().getColumn(1).setPreferredWidth(100); 
+        tableMonitoring.getColumnModel().getColumn(2).setPreferredWidth(200); 
+        tableMonitoring.getColumnModel().getColumn(3).setPreferredWidth(180); 
+        tableMonitoring.getColumnModel().getColumn(4).setPreferredWidth(250); 
+        tableMonitoring.getColumnModel().getColumn(5).setPreferredWidth(100); 
 
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
@@ -158,12 +168,13 @@ public class FormLacakStatus extends Form {
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         tableMonitoring.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
-        tableMonitoring.getColumnModel().getColumn(4).setCellRenderer(topLeftRenderer);
+        tableMonitoring.getColumnModel().getColumn(1).setCellRenderer(topLeftRenderer);
+        tableMonitoring.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
 
         WrapTextRenderer textWrapper = new WrapTextRenderer();
-        tableMonitoring.getColumnModel().getColumn(1).setCellRenderer(textWrapper);
         tableMonitoring.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
         tableMonitoring.getColumnModel().getColumn(3).setCellRenderer(textWrapper);
+        tableMonitoring.getColumnModel().getColumn(4).setCellRenderer(textWrapper);
 
         ((DefaultTableCellRenderer) tableMonitoring.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -205,12 +216,13 @@ public class FormLacakStatus extends Form {
     private void bukaFormUpdate() {
         int row = tableMonitoring.getSelectedRow();
         if(row == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih salah satu nota di tabel terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            tampilkanNotif("Peringatan", "Pilih salah satu nota di tabel terlebih dahulu!", "warning");
             return;
         }
         int modelRow = tableMonitoring.convertRowIndexToModel(row);
-        String idNota = tableModel.getValueAt(modelRow, 0).toString();
-        String pelanggan = tableModel.getValueAt(modelRow, 1).toString();
+        // Karena ada penambahan kolom "No", maka index ID bergeser dari 0 ke 1
+        String idNota = tableModel.getValueAt(modelRow, 1).toString();
+        String pelanggan = tableModel.getValueAt(modelRow, 2).toString();
         
         Window window = SwingUtilities.getWindowAncestor(this);
         JFrame mainFrame = null;
@@ -256,6 +268,7 @@ public class FormLacakStatus extends Form {
 
                     try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
                         try (ResultSet res = ps.executeQuery()) {
+                            int no = 1;
                             while (res.next()) {
                                 String id = "N" + String.format("%05d", res.getInt("id_servis"));
                                 String nama = res.getString("nama_pelanggan");
@@ -267,7 +280,7 @@ public class FormLacakStatus extends Form {
                                 int persen = res.getInt("persentase");
                                 String strPersen = persen + "%";
 
-                                publish(new Object[]{id, nama, hp, status, strPersen});
+                                publish(new Object[]{no++, id, nama, hp, status, strPersen});
                             }
                         }
                     }
@@ -291,9 +304,7 @@ public class FormLacakStatus extends Form {
                     get(); 
                     liveSearch(); 
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(FormLacakStatus.this, 
-                        "Gagal mengambil data dari Database!\nPastikan kamu sudah menjalankan SQL 'ALTER TABLE' di phpMyAdmin.\n\nDetail Error: " + errorMsg, 
-                        "Database Error", JOptionPane.ERROR_MESSAGE);
+                    tampilkanNotif("Database Error", "Gagal memuat dari Database: " + errorMsg, "error");
                 }
             }
         };
@@ -307,6 +318,34 @@ public class FormLacakStatus extends Form {
         } else {
             rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
         }
+    }
+
+    // =========================================================
+    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
+    // =========================================================
+    private void tampilkanNotif(String title, String message, String type) {
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
+        
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        
+        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
+        
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
+        
+        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
+        
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
+        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
+
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
 
     class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {

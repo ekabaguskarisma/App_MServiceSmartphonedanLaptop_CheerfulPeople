@@ -6,6 +6,7 @@ import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.NumberFormat;
@@ -90,6 +91,10 @@ public class FormDataSparepart extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
+        // --- TAMBAHAN FITUR ENTER: Jika tekan Enter di Harga Jual, otomatis Simpan ---
+        txtJual.addActionListener(e -> btnSimpan.doClick());
+        // ----------------------------------------------------------------------------
+        
         btnHapus = new JButton("Hapus");
         btnHapus.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnHapus.setEnabled(false);
@@ -148,7 +153,7 @@ public class FormDataSparepart extends Form {
         panelHeaderTabel.add(txtSearch, "wmin 100, wmax 250, h 38!");
         panelHeaderTabel.add(btnRefresh, "h 38!");
 
-        String[] kolom = {"ID", "Nama Sparepart", "Kategori", "Stok", "H. Modal", "H. Jual"};
+        String[] kolom = {"No.", "Nama Sparepart", "Kategori", "Stok", "H. Modal", "H. Jual", "ID_Asli", "Modal_Asli", "Jual_Asli"};
         tableModel = new DefaultTableModel(kolom, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -169,12 +174,19 @@ public class FormDataSparepart extends Form {
         tableHeader.setBackground(TABLE_HEADER_BG); 
         tableHeader.setForeground(SIDEBAR_MAIN_COLOR);
         
-        tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(60);
-        tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(200); 
-        tableSparepart.getColumnModel().getColumn(2).setPreferredWidth(120);
-        tableSparepart.getColumnModel().getColumn(3).setPreferredWidth(70);
-        tableSparepart.getColumnModel().getColumn(4).setPreferredWidth(110);
-        tableSparepart.getColumnModel().getColumn(5).setPreferredWidth(110);
+        tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(50); // No.
+        tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(200); // Nama
+        tableSparepart.getColumnModel().getColumn(2).setPreferredWidth(120); // Kategori
+        tableSparepart.getColumnModel().getColumn(3).setPreferredWidth(60);  // Stok
+        tableSparepart.getColumnModel().getColumn(4).setPreferredWidth(120); // Modal (Rp)
+        tableSparepart.getColumnModel().getColumn(5).setPreferredWidth(120); // Jual (Rp)
+        
+        // Sembunyikan Data Asli (Tanpa Rp)
+        for (int i = 6; i <= 8; i++) {
+            tableSparepart.getColumnModel().getColumn(i).setMinWidth(0);
+            tableSparepart.getColumnModel().getColumn(i).setMaxWidth(0);
+            tableSparepart.getColumnModel().getColumn(i).setWidth(0);
+        }
 
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
@@ -209,8 +221,21 @@ public class FormDataSparepart extends Form {
         btnSimpan.addActionListener(e -> simpanAtauUpdateData());
         btnHapus.addActionListener(e -> hapusData());
         btnBersih.addActionListener(e -> bersihkanForm());
-        btnRefresh.addActionListener(e -> { txtSearch.setText(""); loadDataDariDatabase(); });
+        
+        btnRefresh.addActionListener(e -> { 
+            txtSearch.setText(""); 
+            bersihkanForm(); // Bersihkan form input saat direfresh
+            loadDataDariDatabase(); 
+        });
 
+        // --- TAMBAHAN FITUR ENTER PENCARIAN ---
+        txtSearch.addActionListener(e -> {
+            if (tableSparepart.getRowCount() > 0) {
+                tableSparepart.setRowSelectionInterval(0, 0); // Pilih otomatis
+                pilihData(); // Isi form
+            }
+        });
+        
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { liveSearch(); }
             public void removeUpdate(DocumentEvent e) { liveSearch(); }
@@ -219,30 +244,35 @@ public class FormDataSparepart extends Form {
 
         tableSparepart.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                int row = tableSparepart.getSelectedRow();
-                if (row >= 0) {
-                    int modelRow = tableSparepart.convertRowIndexToModel(row);
-                    selectedId = tableModel.getValueAt(modelRow, 0).toString().replace("SPR-", ""); 
-                    
-                    txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
-                    cbKategori.setSelectedItem(tableModel.getValueAt(modelRow, 2).toString());
-                    txtStok.setText(tableModel.getValueAt(modelRow, 3).toString());
-                    
-                    String modal = tableModel.getValueAt(modelRow, 4).toString().replaceAll("[^0-9]", "");
-                    String jual = tableModel.getValueAt(modelRow, 5).toString().replaceAll("[^0-9]", "");
-                    txtModal.setText(modal);
-                    txtJual.setText(jual);
-
-                    lblTitleForm.setText("Edit Data Sparepart");
-                    lblTitleForm.setForeground(SUCCESS_GREEN); 
-                    
-                    btnSimpan.setText("Update Data");
-                    btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
-                    
-                    btnHapus.setEnabled(true);
-                }
+                pilihData();
             }
         });
+    }
+
+    private void pilihData() {
+        int row = tableSparepart.getSelectedRow();
+        if (row >= 0) {
+            int modelRow = tableSparepart.convertRowIndexToModel(row);
+            
+            // Ambil ID dari Kolom Hidden Index 6
+            selectedId = tableModel.getValueAt(modelRow, 6).toString(); 
+            
+            txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
+            cbKategori.setSelectedItem(tableModel.getValueAt(modelRow, 2).toString());
+            txtStok.setText(tableModel.getValueAt(modelRow, 3).toString());
+            
+            // Ambil Harga Mentah dari Kolom Hidden Index 7 & 8
+            txtModal.setText(tableModel.getValueAt(modelRow, 7).toString());
+            txtJual.setText(tableModel.getValueAt(modelRow, 8).toString());
+
+            lblTitleForm.setText("Edit Data Sparepart");
+            lblTitleForm.setForeground(SUCCESS_GREEN); 
+            
+            btnSimpan.setText("Update Data");
+            btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
+            
+            btnHapus.setEnabled(true);
+        }
     }
 
     private JScrollPane createCustomScroll(JPanel p) {
@@ -253,50 +283,38 @@ public class FormDataSparepart extends Form {
         return s;
     }
     
-    // FUNGSI NOTIFIKASI CUSTOM
+    // =========================================================
+    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
+    // =========================================================
     private void tampilkanNotif(String title, String message, String type) {
-        String bgColor = "#e74c3c";
-        String iconName = "error.svg";
+        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        String iconName = type.equals("success") ? "success.svg" : "error.svg";
         
-        if (type.equals("success")) {
-            bgColor = "#27ae60";
-            iconName = "success.svg";
-        } else if (type.equals("warning")) {
-            bgColor = "#ff8200";
-            iconName = "error.svg";
-        }
-
-        JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        internalPanel.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
+        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
 
         FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
         icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        JLabel lbIcon = new JLabel(icon);
         
-        JPanel textPanel = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]"));
-        textPanel.setOpaque(false); 
+        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); 
+        tp.setOpaque(false); 
+        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
+        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
         
-        JLabel lbTitle = new JLabel(title);
-        lbTitle.putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff");
-        JLabel lbMessage = new JLabel(message);
-        lbMessage.putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)");
+        p.add(new JLabel(icon), "top, gapy 2"); 
+        p.add(tp);
         
-        textPanel.add(lbTitle);
-        textPanel.add(lbMessage);
+        JButton b = new JButton("Tutup") {{ 
+            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
+            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
+        }};
         
-        internalPanel.add(lbIcon, "top, gapy 2");
-        internalPanel.add(textPanel);
-        
-        JButton btnTutup = new JButton("Tutup");
-        btnTutup.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnTutup.putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
-        
-        btnTutup.addActionListener(e -> {
-            Window window = SwingUtilities.getWindowAncestor(btnTutup);
-            if (window != null) window.dispose(); 
+        b.addActionListener(e -> { 
+            Window w = SwingUtilities.getWindowAncestor(b); 
+            if(w != null) w.dispose(); 
         });
 
-        JOptionPane.showOptionDialog(this, internalPanel, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{btnTutup}, btnTutup);
+        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
     
     // FUNGSI KONFIRMASI (YES / NO)
@@ -352,24 +370,30 @@ public class FormDataSparepart extends Form {
     private void loadDataDariDatabase() {
         tableModel.setRowCount(0); 
         NumberFormat formatRupiah = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
-        
+        int no = 1;
         try {
-            java.sql.Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksi();
             String sql = "SELECT * FROM data_sparepart ORDER BY id_sparepart DESC";
             PreparedStatement ps = kon.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                String hargaModal = formatRupiah.format(rs.getDouble("harga_modal")).replace(",00", "");
-                String hargaJual = formatRupiah.format(rs.getDouble("harga_jual")).replace(",00", "");
+                double modal = rs.getDouble("harga_modal");
+                double jual = rs.getDouble("harga_jual");
+                
+                String rpModal = formatRupiah.format(modal).replace(",00", "");
+                String rpJual = formatRupiah.format(jual).replace(",00", "");
                 
                 tableModel.addRow(new Object[]{
-                    "SPR-" + rs.getInt("id_sparepart"),
+                    no++, // Visual Nomor Urut
                     rs.getString("nama_sparepart"), 
                     rs.getString("kategori"),
                     rs.getInt("stok"),
-                    hargaModal,
-                    hargaJual
+                    rpModal, // Visual Rupiah
+                    rpJual,  // Visual Rupiah
+                    rs.getInt("id_sparepart"), // Hidden ID Asli
+                    String.format("%.0f", modal), // Hidden Angka Mentah Modal
+                    String.format("%.0f", jual)   // Hidden Angka Mentah Jual
                 });
             }
         } catch (Exception e) {
@@ -394,17 +418,44 @@ public class FormDataSparepart extends Form {
             double modal = Double.parseDouble(modalStr);
             double jual = Double.parseDouble(jualStr);
             
-            java.sql.Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksi();
             
             if (selectedId.isEmpty()) {
-                String sql = "INSERT INTO data_sparepart (nama_sparepart, kategori, stok, harga_modal, harga_jual) VALUES (?, ?, ?, ?, ?)";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, nama); ps.setString(2, kategori); ps.setInt(3, stok); ps.setDouble(4, modal); ps.setDouble(5, jual);
-                
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Berhasil", "Data sparepart baru berhasil ditambahkan!", "success");
+                // === MODE INPUT BARU DENGAN LOGIKA CEK DUPLIKAT (UPSERT) ===
+                String sqlCek = "SELECT id_sparepart, stok FROM data_sparepart WHERE nama_sparepart = ? AND kategori = ?";
+                PreparedStatement psCek = kon.prepareStatement(sqlCek);
+                psCek.setString(1, nama);
+                psCek.setString(2, kategori);
+                ResultSet rs = psCek.executeQuery();
+
+                if (rs.next()) {
+                    // Jika sudah ada, tambahkan stoknya
+                    int idExisting = rs.getInt("id_sparepart");
+                    int stokLama = rs.getInt("stok");
+                    int totalStokSekarang = stokLama + stok;
+
+                    String sqlUpdate = "UPDATE data_sparepart SET stok = ?, harga_modal = ?, harga_jual = ? WHERE id_sparepart = ?";
+                    PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate);
+                    psUpdate.setInt(1, totalStokSekarang);
+                    psUpdate.setDouble(2, modal);
+                    psUpdate.setDouble(3, jual);
+                    psUpdate.setInt(4, idExisting);
+                    
+                    if (psUpdate.executeUpdate() > 0) {
+                        tampilkanNotif("Berhasil", "Barang sudah ada. Stok ditambahkan menjadi: " + totalStokSekarang, "success");
+                    }
+                } else {
+                    // Jika belum ada, insert baru
+                    String sqlInsert = "INSERT INTO data_sparepart (nama_sparepart, kategori, stok, harga_modal, harga_jual) VALUES (?, ?, ?, ?, ?)";
+                    PreparedStatement psInsert = kon.prepareStatement(sqlInsert);
+                    psInsert.setString(1, nama); psInsert.setString(2, kategori); psInsert.setInt(3, stok); psInsert.setDouble(4, modal); psInsert.setDouble(5, jual);
+                    
+                    if (psInsert.executeUpdate() > 0) {
+                        tampilkanNotif("Berhasil", "Data sparepart baru berhasil ditambahkan!", "success");
+                    }
                 }
             } else {
+                // === MODE EDIT (Update Data Spesifik) ===
                 String sql = "UPDATE data_sparepart SET nama_sparepart=?, kategori=?, stok=?, harga_modal=?, harga_jual=? WHERE id_sparepart=?";
                 PreparedStatement ps = kon.prepareStatement(sql);
                 ps.setString(1, nama); ps.setString(2, kategori); ps.setInt(3, stok); ps.setDouble(4, modal); ps.setDouble(5, jual); ps.setString(6, selectedId);
@@ -413,9 +464,12 @@ public class FormDataSparepart extends Form {
                     tampilkanNotif("Diperbarui", "Data sparepart berhasil diupdate!", "success");
                 }
             }
+            
             loadDataDariDatabase();
             bersihkanForm(); 
             
+        } catch (NumberFormatException e) {
+            tampilkanNotif("Error", "Input stok atau harga harus berupa angka!", "error");
         } catch (Exception e) {
             tampilkanNotif("Error Sistem", "Terjadi kesalahan database: " + e.getMessage(), "error");
         }
@@ -426,7 +480,7 @@ public class FormDataSparepart extends Form {
 
         if (tampilkanConfirm("Konfirmasi Hapus", "Yakin ingin menghapus sparepart ini dari inventaris?")) {
             try {
-                java.sql.Connection kon = DatabaseConnection.getKoneksi();
+                Connection kon = DatabaseConnection.getKoneksi();
                 String sql = "DELETE FROM data_sparepart WHERE id_sparepart=?";
                 PreparedStatement ps = kon.prepareStatement(sql);
                 ps.setString(1, selectedId);
@@ -437,7 +491,7 @@ public class FormDataSparepart extends Form {
                     bersihkanForm();
                 }
             } catch (Exception e) {
-                tampilkanNotif("Error Sistem", "Gagal menghapus data: " + e.getMessage(), "error");
+                tampilkanNotif("Gagal", "Data tidak bisa dihapus karena masih terkait di keranjang.", "error");
             }
         }
     }

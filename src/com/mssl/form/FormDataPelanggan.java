@@ -84,6 +84,11 @@ public class FormDataPelanggan extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
+        // --- TAMBAHAN FITUR ENTER UNTUK INPUT FORM ---
+        txtNama.addActionListener(e -> btnSimpan.doClick());
+        txtWa.addActionListener(e -> btnSimpan.doClick());
+        // ---------------------------------------------
+        
         btnHapus = new JButton("Hapus");
         btnHapus.setEnabled(false);
         btnHapus.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -135,6 +140,15 @@ public class FormDataPelanggan extends Form {
         try {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16));
         } catch (Exception e) {}
+        
+        // --- TAMBAHAN FITUR ENTER UNTUK PENCARIAN ---
+        txtSearch.addActionListener(e -> {
+            if (table.getRowCount() > 0) {
+                table.setRowSelectionInterval(0, 0); // Langsung pilih baris pertama hasil pencarian
+                pilihData(); // Langsung isi ke form
+            }
+        });
+        // --------------------------------------------
 
         btnRefresh = new JButton("Refresh Data");
         btnRefresh.setBackground(SIDEBAR_MAIN_COLOR);
@@ -212,6 +226,7 @@ public class FormDataPelanggan extends Form {
         btnBersih.addActionListener(e -> bersihkanForm());
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
+            bersihkanForm();
             loadDataDariDatabase();
         });
 
@@ -223,24 +238,28 @@ public class FormDataPelanggan extends Form {
 
         table.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                int row = table.getSelectedRow();
-                if (row >= 0) {
-                    int modelRow = table.convertRowIndexToModel(row);
-                    // Ambil ID Asli dari kolom rahasia (index 4)
-                    selectedId = tableModel.getValueAt(modelRow, 4).toString();
-                    
-                    txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
-                    txtWa.setText(tableModel.getValueAt(modelRow, 2).toString());
-                    txtAlamat.setText(tableModel.getValueAt(modelRow, 3).toString());
-
-                    lblTitleForm.setText("Edit Data Pelanggan");
-                    lblTitleForm.setForeground(SUCCESS_GREEN);
-                    btnSimpan.setText("Update Data");
-                    btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1");
-                    btnHapus.setEnabled(true);
-                }
+                pilihData();
             }
         });
+    }
+
+    private void pilihData() {
+        int row = table.getSelectedRow();
+        if (row >= 0) {
+            int modelRow = table.convertRowIndexToModel(row);
+            // Ambil ID Asli dari kolom rahasia (index 4)
+            selectedId = tableModel.getValueAt(modelRow, 4).toString();
+            
+            txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
+            txtWa.setText(tableModel.getValueAt(modelRow, 2).toString());
+            txtAlamat.setText(tableModel.getValueAt(modelRow, 3).toString());
+
+            lblTitleForm.setText("Edit Data Pelanggan");
+            lblTitleForm.setForeground(SUCCESS_GREEN);
+            btnSimpan.setText("Update Data");
+            btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", SUCCESS_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1");
+            btnHapus.setEnabled(true);
+        }
     }
 
     private JScrollPane createCustomScroll(JPanel p) {
@@ -255,7 +274,7 @@ public class FormDataPelanggan extends Form {
     
     // CUSTOM NOTIFICATIONS
     private void tampilkanNotif(String title, String message, String type) {
-        String bgColor = (type.equals("success")) ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
+        final String bgColor = (type.equals("success")) ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
         String iconName = (type.equals("success")) ? "success.svg" : "error.svg";
         
         JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
@@ -318,26 +337,63 @@ public class FormDataPelanggan extends Form {
         String nama = txtNama.getText().trim();
         String wa = txtWa.getText().trim();
         String alamat = txtAlamat.getText().trim();
-
-        if (nama.isEmpty() || wa.isEmpty()) {
-            tampilkanNotif("Peringatan", "Nama dan Nomor WhatsApp wajib diisi!", "warning");
+        
+        if (nama.isEmpty() || wa.isEmpty() || alamat.isEmpty()) {
+            tampilkanNotif("Peringatan", "Semua kolom harus diisi!", "warning");
             return;
+        }
+        
+        if (wa.length() < 9) {
+            tampilkanNotif("Peringatan", "Nomor WhatsApp terlalu pendek (Minimal 9 angka)!", "warning");
+            txtWa.requestFocus(); 
+            return; 
         }
 
         try {
             Connection kon = DatabaseConnection.getKoneksi();
             if (selectedId.isEmpty()) {
-                String sql = "INSERT INTO data_pelanggan (nama_pelanggan, no_whatsapp, alamat) VALUES (?, ?, ?)";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, nama); ps.setString(2, wa); ps.setString(3, alamat);
-                if (ps.executeUpdate() > 0) tampilkanNotif("Berhasil", "Data pelanggan baru berhasil ditambahkan!", "success");
+                // === MODE INPUT BARU: CEK DUPLIKAT NOMOR WA (UPSERT) ===
+                String sqlCek = "SELECT id_pelanggan FROM data_pelanggan WHERE no_whatsapp = ?";
+                PreparedStatement psCek = kon.prepareStatement(sqlCek);
+                psCek.setString(1, wa);
+                ResultSet rs = psCek.executeQuery();
+
+                if (rs.next()) {
+                    // JIKA NOMOR WA SUDAH ADA -> UPDATE NAMA & ALAMAT
+                    int idExisting = rs.getInt("id_pelanggan");
+
+                    String sqlUpdate = "UPDATE data_pelanggan SET nama_pelanggan = ?, alamat = ? WHERE id_pelanggan = ?";
+                    PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate);
+                    psUpdate.setString(1, nama);
+                    psUpdate.setString(2, alamat);
+                    psUpdate.setInt(3, idExisting);
+                    
+                    if (psUpdate.executeUpdate() > 0) {
+                        tampilkanNotif("Berhasil", "Nomor WA sudah terdaftar. Data pelanggan berhasil diperbarui!", "success");
+                    }
+                } else {
+                    // JIKA NOMOR WA BELUM ADA -> INSERT PELANGGAN BARU
+                    String sqlInsert = "INSERT INTO data_pelanggan (nama_pelanggan, no_whatsapp, alamat) VALUES (?, ?, ?)";
+                    PreparedStatement psInsert = kon.prepareStatement(sqlInsert);
+                    psInsert.setString(1, nama);
+                    psInsert.setString(2, wa);
+                    psInsert.setString(3, alamat);
+                    
+                    if (psInsert.executeUpdate() > 0) {
+                        tampilkanNotif("Berhasil", "Data pelanggan baru berhasil ditambahkan!", "success");
+                    }
+                }
             } else {
+                // === MODE EDIT DARI TABEL ===
                 String sql = "UPDATE data_pelanggan SET nama_pelanggan=?, no_whatsapp=?, alamat=? WHERE id_pelanggan=?";
                 PreparedStatement ps = kon.prepareStatement(sql);
                 ps.setString(1, nama); ps.setString(2, wa); ps.setString(3, alamat); ps.setString(4, selectedId);
                 if (ps.executeUpdate() > 0) tampilkanNotif("Diperbarui", "Data pelanggan berhasil diupdate!", "success");
             }
-            loadDataDariDatabase(); bersihkanForm();
+            
+            loadDataDariDatabase(); 
+            bersihkanForm();
+            
         } catch (Exception e) {
             tampilkanNotif("Error Database", e.getMessage(), "error");
         }
