@@ -25,6 +25,9 @@ public class FormNotaServis extends Form {
     private JLabel lblBiaya, lblStatusBayar, lblGaransi;
     
     private JLabel lblTitleJasa, lblValJasa;
+    // PERBAIKAN: Menambahkan referensi global untuk judul total bayar agar bisa diubah dinamis
+    private JLabel lblTitleTotalBayar; 
+    
     private JPanel pnlDaftarKomponen; // PANEL DINAMIS UNTUK SPAREPART
     private JPanel cardFinansial; 
     
@@ -158,7 +161,13 @@ public class FormNotaServis extends Form {
         
         lblBiaya = new JLabel("Rp 0"); lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 28)); lblBiaya.setForeground(FINISH_GREEN); 
         cardFinansial.add(new JSeparator(), "span 2, growx, gaptop 10");
-        cardFinansial.add(new JLabel("TOTAL PEMBAYARAN / ESTIMASI"){{ setFont(new Font("Segoe UI", Font.BOLD, 14)); setForeground(SIDEBAR_MAIN_COLOR); }}, "gaptop 5"); 
+        
+        // PERBAIKAN: Menginisialisasi referensi global untuk judul total bayar
+        lblTitleTotalBayar = new JLabel("TOTAL PEMBAYARAN / ESTIMASI");
+        lblTitleTotalBayar.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
+        lblTitleTotalBayar.setForeground(SIDEBAR_MAIN_COLOR);
+        cardFinansial.add(lblTitleTotalBayar, "gaptop 5"); 
+        
         cardFinansial.add(lblBiaya, "right, gaptop 5");
         
         pnlCetak.add(cardFinansial, "growx, gaptop 10");
@@ -343,7 +352,6 @@ public class FormNotaServis extends Form {
                 
                 // MENGAMBIL LIST SPAREPART SECARA DINAMIS
                 if (isFound) {
-                    // PERBAIKAN: Tambahkan sp.kategori di query SQL
                     String sqlParts = "SELECT sp.kategori, sp.nama_sparepart, det.qty, det.subtotal " +
                                       "FROM detail_pengambilan_sparepart det " +
                                       "JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
@@ -353,11 +361,10 @@ public class FormNotaServis extends Form {
                         psParts.setInt(1, idServisAngka);
                         try (ResultSet rsParts = psParts.executeQuery()) {
                             while(rsParts.next()) {
-                                // PERBAIKAN: Gabungkan Kategori dan Nama Sparepart
                                 String namaLengkapPart = rsParts.getString("kategori") + " " + rsParts.getString("nama_sparepart");
                                 
                                 listParts.add(new String[]{
-                                    namaLengkapPart, // Masukkan nama yang sudah digabung
+                                    namaLengkapPart, 
                                     String.valueOf(rsParts.getInt("qty")),
                                     String.valueOf(rsParts.getDouble("subtotal"))
                                 });
@@ -416,12 +423,16 @@ public class FormNotaServis extends Form {
                         lblTglSelesai.setText((dbTglSelesai == null || dbTglSelesai.trim().isEmpty()) ? "Belum Selesai" : dbTglSelesai);
                         lblTglAmbil.setText((dbTglAmbil == null || dbTglAmbil.trim().isEmpty()) ? "Belum Diambil" : dbTglAmbil);
                         
+                        // PERBAIKAN: Menentukan Label Total Pembayaran Berdasarkan Status
                         if (dbStatusBayar == null || dbStatusBayar.isEmpty()) {
                             lblStatusBayar.setText("Belum Lunas"); lblStatusBayar.setForeground(ERROR_RED);
-                        } else if (dbStatusBayar.contains("Lunas")) {
+                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI"); // Masih estimasi
+                        } else if (dbStatusBayar.contains("Lunas") || dbStatusBayar.contains("Diambil") || dbStatusBayar.contains("Tunai") || dbStatusBayar.contains("Transfer")) {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(FINISH_GREEN);
+                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN"); // Bukan estimasi lagi
                         } else {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(ERROR_RED);
+                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI");
                         }
 
                         if (dbGaransi == null || dbGaransi.isEmpty()) {

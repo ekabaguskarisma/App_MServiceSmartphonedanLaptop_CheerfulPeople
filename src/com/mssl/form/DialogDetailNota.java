@@ -31,7 +31,8 @@ public class DialogDetailNota extends JDialog {
     private JLabel lblTglSelesai, lblTglAmbil; 
     private JTextArea txtKeluhan, txtDiagnosa, txtTindakan;
     
-    private JLabel lblValJasa, lblTitlePart, lblValPart;
+    // PENAMBAHAN: lblTitleJasa agar teksnya bisa kita ubah dinamis
+    private JLabel lblTitleJasa, lblValJasa, lblTitlePart, lblValPart;
     private JPanel cardRincian;
     
     class ScrollablePanel extends JPanel implements Scrollable {
@@ -163,12 +164,15 @@ public class DialogDetailNota extends JDialog {
         lblRincianTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblRincianTitle.setForeground(ACCENT_ORANGE);
         
+        // PENAMBAHAN: Menginisialisasi lblTitleJasa
+        lblTitleJasa = createTitleLabel("Biaya Jasa Teknisi & Perbaikan:");
         lblValJasa = createValLabel();
         lblTitlePart = createTitleLabel("Penggantian Komponen");
         lblValPart = createValLabel();
         
         cardRincian.add(lblRincianTitle, "span 2, gapbottom 5");
-        cardRincian.add(createTitleLabel("Biaya Jasa Teknisi & Perbaikan:")); cardRincian.add(lblValJasa);
+        // PENAMBAHAN: Memasukkan lblTitleJasa ke dalam cardRincian
+        cardRincian.add(lblTitleJasa); cardRincian.add(lblValJasa);
         cardRincian.add(lblTitlePart); cardRincian.add(lblValPart);
         
         mainPanel.add(cardRincian);
@@ -294,7 +298,12 @@ public class DialogDetailNota extends JDialog {
                 // Isi Detail Kerusakan
                 txtKeluhan.setText(rs.getString("keluhan_awal"));
                 txtDiagnosa.setText(rs.getString("hasil_diagnosa") != null ? rs.getString("hasil_diagnosa") : "-");
-                txtTindakan.setText(rs.getString("tindakan_perbaikan") != null ? rs.getString("tindakan_perbaikan") : "-");
+                
+                String tindakan = rs.getString("tindakan_perbaikan") != null ? rs.getString("tindakan_perbaikan") : "-";
+                txtTindakan.setText(tindakan);
+                
+                // PENAMBAHAN: Mengubah Judul Jasa sesuai tindakan yang dicatat teknisi
+                lblTitleJasa.setText("Biaya Jasa (" + tindakan + "):");
                 
                 lblTglSelesai.setText(rs.getString("tanggal_selesai") != null ? rs.getString("tanggal_selesai") : "-");
                 lblTglAmbil.setText(rs.getString("tgl_ambil") != null ? rs.getString("tgl_ambil") : "-");
@@ -309,11 +318,12 @@ public class DialogDetailNota extends JDialog {
                 lblMetode.setText(rs.getString("status_pembayaran") != null ? rs.getString("status_pembayaran") : "-");
                 lblMasaGaransi.setText(rs.getString("masa_garansi") != null ? rs.getString("masa_garansi") : "-");
                 
-                // 2. QUERY KEDUA: AMBIL DAFTAR SPAREPART (Karena bisa lebih dari satu)
+                // 2. QUERY KEDUA: AMBIL DAFTAR SPAREPART
                 double totalHargaSp = 0;
                 StringBuilder daftarSp = new StringBuilder();
                 
-                String sqlSp = "SELECT s.nama_sparepart, d.qty, d.subtotal " +
+                // PENAMBAHAN: Memanggil s.kategori agar jenis komponen muncul
+                String sqlSp = "SELECT s.kategori, s.nama_sparepart, d.qty, d.subtotal " +
                                "FROM detail_pengambilan_sparepart d " +
                                "JOIN data_sparepart s ON d.id_sparepart = s.id_sparepart " +
                                "JOIN data_pengambilan p ON d.id_pengambilan = p.id_pengambilan " +
@@ -324,7 +334,10 @@ public class DialogDetailNota extends JDialog {
                 
                 while(rsSp.next()) {
                     if (daftarSp.length() > 0) daftarSp.append(", ");
-                    daftarSp.append(rsSp.getString("nama_sparepart")).append(" (").append(rsSp.getInt("qty")).append("x)");
+                    // PENAMBAHAN: Menyusun teks Kategori + Nama + Qty
+                    daftarSp.append(rsSp.getString("kategori")).append(" ")
+                            .append(rsSp.getString("nama_sparepart")).append(" ")
+                            .append("(").append(rsSp.getInt("qty")).append("x)");
                     totalHargaSp += rsSp.getDouble("subtotal");
                 }
                 

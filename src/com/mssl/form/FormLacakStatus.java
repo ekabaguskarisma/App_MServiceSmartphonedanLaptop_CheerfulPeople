@@ -56,7 +56,7 @@ public class FormLacakStatus extends Form {
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 24));
         lblTitle.setForeground(SIDEBAR_MAIN_COLOR);
 
-        JLabel lblDesc = new JLabel("Pantau progres perangkat yang sedang berada di bengkel dan update status pengerjaan.");
+        JLabel lblDesc = new JLabel("Pantau progres perangkat yang sedang berada di service center dan update status pengerjaan.");
         lblDesc.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         lblDesc.setForeground(new Color(130, 135, 150));
 
@@ -243,13 +243,15 @@ public class FormLacakStatus extends Form {
             @Override
             protected Void doInBackground() throws Exception {
                 try {
+                    // --- PEMBARUAN QUERY: MENYEMBUNYIKAN YANG SUDAH 100% ATAU SUDAH DIAMBIL ---
                     StringBuilder sql = new StringBuilder(
                         "SELECT s.id_servis, pel.nama_pelanggan, per.merek, per.tipe_model, p.status_servis, p.persentase " +
                         "FROM data_servis_lengkap s " +
                         "JOIN data_pelanggan pel ON s.id_pelanggan = pel.id_pelanggan " +
                         "JOIN data_perangkat per ON s.id_perangkat = per.id_perangkat " +
                         "LEFT JOIN tb_progres_servis p ON p.id_nota = CONCAT('N', LPAD(s.id_servis, 5, '0')) " +
-                        "WHERE s.status NOT IN ('Selesai', 'Batal')" 
+                        "WHERE s.status NOT IN ('Selesai', 'Diambil', 'Batal') " +
+                        "AND (p.persentase < 100 OR p.persentase IS NULL) "
                     );
                     
                     if (!filterTahapan.equals("Semua Tahapan")) {
@@ -258,6 +260,8 @@ public class FormLacakStatus extends Form {
                         } else if (filterTahapan.equals("Sedang Dikerjakan")) {
                             sql.append(" AND p.persentase > 20 AND p.persentase < 90");
                         } else if (filterTahapan.equals("Selesai (Siap Diambil)")) {
+                            // Karena sudah dicegah di awal, filter ini otomatis akan menampilkan 0 data
+                            // (Sesuai dengan harapan Anda karena data selesai tidak boleh ada di sini)
                             sql.append(" AND p.persentase >= 100");
                         }
                     }

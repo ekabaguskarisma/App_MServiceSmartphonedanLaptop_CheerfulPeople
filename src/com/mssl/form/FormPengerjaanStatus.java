@@ -9,6 +9,7 @@ import java.awt.event.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.CallableStatement; // IMPORT BARU UNTUK STORED PROCEDURE
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -146,7 +147,6 @@ public class FormPengerjaanStatus extends Form {
         pHeaderTable.add(txtSearch, "w 50:220, h 38!, gapright 10");
         pHeaderTable.add(btnRefresh, "h 38!"); 
 
-        // PERBAIKAN: Menambahkan kolom No. Urut visual di Index 0
         String[] kolom = {"No.", "ID Nota", "Pelanggan", "Perangkat", "Status", "ID_Asli"};
         tableModel = new DefaultTableModel(kolom, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
         tablePekerjaan = new JTable(tableModel);
@@ -185,10 +185,9 @@ public class FormPengerjaanStatus extends Form {
             loadPekerjaanAktif(); 
         });
         
-        // --- TAMBAHAN FITUR ENTER: PENCARIAN ---
         txtSearch.addActionListener(e -> {
             if (tablePekerjaan.getRowCount() > 0) {
-                tablePekerjaan.setRowSelectionInterval(0, 0); // Sorot baris pertama
+                tablePekerjaan.setRowSelectionInterval(0, 0);
                 int modelRow = tablePekerjaan.convertRowIndexToModel(0);
                 selectedIdServis = tableModel.getValueAt(modelRow, 5).toString();
                 txtID.setText(tableModel.getValueAt(modelRow, 1).toString());
@@ -285,7 +284,7 @@ public class FormPengerjaanStatus extends Form {
                          "FROM data_servis_lengkap s " +
                          "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
                          "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
-                         "WHERE s.status NOT IN ('Selesai', 'Batal') ORDER BY s.id_servis ASC";
+                         "WHERE s.status NOT IN ('Selesai', 'Diambil', 'Batal') ORDER BY s.id_servis ASC";
             ResultSet rs = kon.createStatement().executeQuery(sql);
             while(rs.next()){
                 tableModel.addRow(new Object[]{
@@ -324,30 +323,34 @@ public class FormPengerjaanStatus extends Form {
         
         try {
             Connection kon = DatabaseConnection.getKoneksi();
-            // Update Tabel Utama Servis
-            String sql = "UPDATE data_servis_lengkap SET hasil_diagnosa=?, tindakan_perbaikan=?, status=? WHERE id_servis=?";
-            PreparedStatement ps = kon.prepareStatement(sql);
-            ps.setString(1, diagnosa); ps.setString(2, tindakan); ps.setString(3, status); ps.setString(4, selectedIdServis);
             
-            if (ps.executeUpdate() > 0) {
-                // Sinkronisasi ke Tabel Progres (Untuk Lacak Real-Time Pelanggan)
-                int persen = 10; // Default Antrean
-                if(status.equalsIgnoreCase("Proses")) persen = 50;
-                else if(status.equalsIgnoreCase("Menunggu Sparepart")) persen = 25;
-                else if(status.equalsIgnoreCase("Selesai")) persen = 100;
-                else if(status.equalsIgnoreCase("Batal")) persen = 0;
+            // Kalkulasi Persentase untuk di DB
+            int persen = 10; 
+            if(status.equalsIgnoreCase("Proses")) persen = 50;
+            else if(status.equalsIgnoreCase("Menunggu Sparepart")) persen = 25;
+            else if(status.equalsIgnoreCase("Selesai")) persen = 100;
+            else if(status.equalsIgnoreCase("Batal")) persen = 0;
 
-                String sqlProgres = "INSERT INTO tb_progres_servis (id_nota, status_servis, persentase, keterangan) " +
-                                    "VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status_servis=?, persentase=?, keterangan=?";
-                PreparedStatement psP = kon.prepareStatement(sqlProgres);
-                psP.setString(1, idNota); psP.setString(2, status); psP.setInt(3, persen); psP.setString(4, tindakan);
-                psP.setString(5, status); psP.setInt(6, persen); psP.setString(7, tindakan);
-                psP.executeUpdate();
-                
-                tampilkanNotif("Berhasil", "Progres servis " + idNota + " telah diperbarui!", "success");
-                loadPekerjaanAktif(); resetForm();
-            }
-        } catch (Exception e) { tampilkanNotif("Error", e.getMessage(), "warning"); }
+            // =========================================================================
+            // PERBAIKAN: MENGGUNAKAN STORED PROCEDURE (MEMENUHI SYARAT MODUL BASIS DATA)
+            // =========================================================================
+            String sqlCall = "{CALL sp_simpan_progres_teknisi(?, ?, ?, ?, ?)}";
+            CallableStatement cs = kon.prepareCall(sqlCall);
+            cs.setInt(1, Integer.parseInt(selectedIdServis));
+            cs.setString(2, diagnosa);
+            cs.setString(3, tindakan);
+            cs.setString(4, status);
+            cs.setInt(5, persen);
+            
+            // Eksekusi Stored Procedure
+            cs.executeUpdate();
+            
+            tampilkanNotif("Berhasil", "Progres servis " + idNota + " telah diperbarui!", "success");
+            loadPekerjaanAktif(); resetForm();
+            
+        } catch (Exception e) { 
+            tampilkanNotif("Error", "Gagal memanggil Stored Procedure: " + e.getMessage(), "error"); 
+        }
     }
 
     private void resetForm() {
