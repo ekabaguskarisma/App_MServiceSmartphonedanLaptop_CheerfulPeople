@@ -26,6 +26,9 @@ public class DialogUpdateProgres extends JDialog {
     private JLabel lblAngkaPersen;
     private JTextArea txtLog;
     private JButton btnSimpan, btnBatal;
+    
+    // Variabel pengaman agar event listener tidak looping saat diubah sistem
+    private boolean isAdjustingSlider = false;
 
     public DialogUpdateProgres(JFrame parent, String idNota, String namaPelanggan) {
         super(parent, "Update Progres Servis", true);
@@ -81,8 +84,8 @@ public class DialogUpdateProgres extends JDialog {
         pnlForm.add(createTitleLabel("Status Pengerjaan Terbaru"));
         cbStatus = new JComboBox<>(new String[]{
             "Antrean / Pengecekan", 
-            "Sedang Dikerjakan", 
             "Menunggu Sparepart", 
+            "Sedang Dikerjakan", 
             "Selesai (Siap Diambil)"
         });
         cbStatus.putClientProperty(FlatClientProperties.STYLE, "arc:10; font:14");
@@ -99,7 +102,7 @@ public class DialogUpdateProgres extends JDialog {
         lblAngkaPersen = new JLabel("0%");
         lblAngkaPersen.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblAngkaPersen.setForeground(ACCENT_ORANGE);
-        sliderPersen.addChangeListener(e -> lblAngkaPersen.setText(sliderPersen.getValue() + "%"));
+        
         pnlSlider.add(sliderPersen, "growx");
         pnlSlider.add(lblAngkaPersen, "w 65!, right");
         pnlForm.add(pnlSlider, "growx");
@@ -129,6 +132,15 @@ public class DialogUpdateProgres extends JDialog {
         btnBatal.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBatal.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#e0e0e0; foreground:#333333; font:bold +1; borderWidth:0; focusWidth:0");
 
+        // EVENT LISTENERS UNTUK MENGUNCI LOGIKA STATUS DAN PERSENTASE
+        cbStatus.addActionListener(e -> validasiSliderDanStatus());
+        sliderPersen.addChangeListener(e -> {
+            if (!isAdjustingSlider) {
+                validasiSliderDanStatus();
+            }
+            lblAngkaPersen.setText(sliderPersen.getValue() + "%");
+        });
+
         btnSimpan.addActionListener(e -> simpanProgres());
         btnBatal.addActionListener(e -> dispose());
 
@@ -138,6 +150,38 @@ public class DialogUpdateProgres extends JDialog {
         mainPanel.add(pnlBtn, "growx");
 
         setContentPane(mainPanel);
+    }
+
+    // FUNGSI PENGAMAN LOGIKA PERSENTASE (MENCEGAH BUG BUG)
+    private void validasiSliderDanStatus() {
+        if (isAdjustingSlider) return;
+        isAdjustingSlider = true;
+
+        String status = cbStatus.getSelectedItem().toString();
+        int val = sliderPersen.getValue();
+
+        switch (status) {
+            case "Antrean / Pengecekan":
+                sliderPersen.setEnabled(true);
+                if (val > 20) sliderPersen.setValue(20);
+                break;
+            case "Menunggu Sparepart":
+                sliderPersen.setEnabled(false); // Kunci Slider
+                sliderPersen.setValue(25);      // Patok di 25%
+                break;
+            case "Sedang Dikerjakan":
+                sliderPersen.setEnabled(true);
+                if (val < 30) sliderPersen.setValue(30);
+                if (val >= 100) sliderPersen.setValue(99); // Dilarang 100% kalau belum Selesai
+                break;
+            case "Selesai (Siap Diambil)":
+                sliderPersen.setEnabled(false); // Kunci Slider
+                sliderPersen.setValue(100);     // Patok 100% wajib
+                break;
+        }
+        
+        lblAngkaPersen.setText(sliderPersen.getValue() + "%");
+        isAdjustingSlider = false;
     }
 
     private JLabel createTitleLabel(String text) {
@@ -157,12 +201,18 @@ public class DialogUpdateProgres extends JDialog {
             if (rs.next()) {
                 String stat = rs.getString("status_servis");
                 if(stat != null) cbStatus.setSelectedItem(stat);
+                
                 int persen = rs.getInt("persentase");
                 sliderPersen.setValue(persen);
                 lblAngkaPersen.setText(persen + "%");
+                
                 String log = rs.getString("keterangan");
                 if(log != null) txtLog.setText(log);
             }
+            
+            // Panggil validasi setelah memuat data agar UI langsung terkunci dengan benar
+            validasiSliderDanStatus();
+            
         } catch (Exception e) {
             System.err.println("Load Progres: " + e.getMessage());
         }
@@ -170,7 +220,7 @@ public class DialogUpdateProgres extends JDialog {
 
     private void simpanProgres() {
         String status = cbStatus.getSelectedItem().toString();
-        int persen = sliderPersen.getValue();
+        int persen = sliderPersen.getValue(); // Ini sudah pasti valid karena sistem pengaman di atas
         String log = txtLog.getText().trim();
         int idServisInt = Integer.parseInt(idNota.replace("N", ""));
 
