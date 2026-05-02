@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import com.mssl.main.FormManager; 
+import com.mssl.utils.UIHelper;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
@@ -26,29 +27,24 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import net.miginfocom.swing.MigLayout;
 
 public class FormDashboard extends Form {
 
-    // Palet Warna
     private final Color APP_BG_COLOR = new Color(245, 246, 250); 
     private final Color CARD_BG_COLOR = Color.WHITE;
     private final Color SIDEBAR_MAIN_COLOR = new Color(40, 45, 60); 
     private final Color TEXT_MUTED = new Color(130, 135, 150);
-
-    // Warna Aksen Cheerful People
     private final Color ACCENT_ORANGE = new Color(255, 130, 0); 
     private final Color SUCCESS_GREEN = new Color(46, 204, 113); 
     private final Color INFO_BLUE = new Color(52, 152, 219); 
     private final Color ERROR_RED = new Color(231, 76, 60);
+    private final Color TABLE_HEADER_BG = new Color(235, 238, 245);
 
-    // Variabel Label untuk Data Database
     private JLabel lblTitleBulan, lblValPendapatanHari, lblSubPendapatanHari;
     private JLabel lblValPendapatanBulan, lblSubPendapatanBulan;
     private JLabel lblValLabaHari, lblSubLabaHari; 
@@ -68,9 +64,7 @@ public class FormDashboard extends Form {
 
     private void init() {
         String role = FormManager.getUserRole();
-        if (role == null) {
-            role = "Pelanggan"; 
-        }
+        if (role == null) role = "Pelanggan"; 
 
         setBackground(APP_BG_COLOR);
 
@@ -81,7 +75,6 @@ public class FormDashboard extends Form {
         }
     }
     
-    // DESAIN KHUSUS PELANGGAN 
     private void initPelangganDashboard() {
         setLayout(new MigLayout("wrap, fillx, insets 20 30 20 30", "[fill]", "[][][]"));
 
@@ -94,8 +87,7 @@ public class FormDashboard extends Form {
         JLabel lbDesc = new JLabel("Pusat perbaikan Smartphone dan Laptop terpercaya dengan fitur monitoring Real-Time.");
         lbDesc.putClientProperty(FlatClientProperties.STYLE, "font:14; foreground:rgb(200,200,200)");
 
-        banner.add(lbWelcome);
-        banner.add(lbDesc);
+        banner.add(lbWelcome); banner.add(lbDesc);
 
         JLabel lbInfo = new JLabel("Keunggulan Layanan Kami");
         lbInfo.putClientProperty(FlatClientProperties.STYLE, "font:bold +6; foreground:@accentColor");
@@ -121,33 +113,25 @@ public class FormDashboard extends Form {
 
         JLabel lbDesc = new JLabel("<html><div style='text-align: center; color: rgb(100,100,100); font-family: sans-serif; font-size: 11px;'>" + desc + "</div></html>");
 
-        card.add(lbTitle);
-        card.add(lbDesc);
+        card.add(lbTitle); card.add(lbDesc);
         return card;
     }
     
-    // 2. DESAIN KHUSUS ADMIN & TEKNISI
     private void initAdminDashboard() {
         setLayout(new MigLayout("wrap, fillx, insets 20 35 25 35", "[fill, grow]", "[][][][][grow, fill]"));
 
-        lblValPendapatanHari = new JLabel("Rp 0");
-        lblSubPendapatanHari = new JLabel("Memuat data...");
-        lblValLabaHari = new JLabel("Rp 0");
-        lblSubLabaHari = new JLabel("Keuntungan Bersih");
+        lblValPendapatanHari = new JLabel("Rp 0"); lblSubPendapatanHari = new JLabel("Memuat data...");
+        lblValLabaHari = new JLabel("Rp 0"); lblSubLabaHari = new JLabel("Keuntungan Bersih");
         
         lblTitleBulan = new JLabel("Finansial Bulan ..."); 
-        lblValPendapatanBulan = new JLabel("Rp 0");
-        lblSubPendapatanBulan = new JLabel("Memuat data...");
-        lblValLabaBulan = new JLabel("Rp 0");
-        lblSubLabaBulan = new JLabel("Keuntungan Bersih");
+        lblValPendapatanBulan = new JLabel("Rp 0"); lblSubPendapatanBulan = new JLabel("Memuat data...");
+        lblValLabaBulan = new JLabel("Rp 0"); lblSubLabaBulan = new JLabel("Keuntungan Bersih");
         
-        lblValServisMasuk = new JLabel("0");
-        lblValSedangDikerjakan = new JLabel("0");
-        lblValMenungguSp = new JLabel("0");
-        lblValSiapDiambil = new JLabel("0");
+        lblValServisMasuk = new JLabel("0"); lblValSedangDikerjakan = new JLabel("0");
+        lblValMenungguSp = new JLabel("0"); lblValSiapDiambil = new JLabel("0");
         lblValServisSelesai = new JLabel("0");
 
-        // BAGIAN HEADER
+        // HEADER
         JPanel headerPanel = new JPanel(new MigLayout("insets 0, fillx", "[][][grow, right][][]", "[]"));
         headerPanel.setOpaque(false);
         
@@ -195,7 +179,7 @@ public class FormDashboard extends Form {
         headerPanel.add(btnRefresh, "h 38!");
         add(headerPanel, "gapbottom 20");
 
-        // BAGIAN KARTU FINANSIAL
+        // KARTU FINANSIAL
         JPanel pnlFinancial = new JPanel(new MigLayout("insets 0, gapx 15", "[fill, 25%][fill, 25%][fill, 25%][fill, 25%]", "[fill, 130!]"));
         pnlFinancial.setOpaque(false);
         
@@ -205,7 +189,7 @@ public class FormDashboard extends Form {
         pnlFinancial.add(createFinanceCard("Laba Bulanan", lblValLabaBulan, lblSubLabaBulan, INFO_BLUE));
         add(pnlFinancial, "gapbottom 25");
 
-        // BAGIAN 3 KARTU STATUS OPERASIONAL SERVIS
+        // KARTU STATUS OPERASIONAL
         JLabel lblOpTitle = new JLabel("Status Operasional Servis");
         lblOpTitle.setFont(new Font("Segoe UI", Font.BOLD, 17));
         lblOpTitle.setForeground(SIDEBAR_MAIN_COLOR);
@@ -220,7 +204,7 @@ public class FormDashboard extends Form {
         pnlMetrics.add(createAdminMetricCard("Servis Selesai", lblValServisSelesai, SIDEBAR_MAIN_COLOR)); 
         add(pnlMetrics, "gapbottom 25");
 
-        // BAGIAN TABEL ANTREAN PRIORITAS
+        // TABEL ANTREAN PRIORITAS
         JPanel pnlTable = new JPanel(new MigLayout("wrap, fill, insets 0", "[fill, grow]", "[][grow, fill]"));
         pnlTable.setOpaque(false);
         
@@ -234,38 +218,20 @@ public class FormDashboard extends Form {
         };
         
         table = new JTable(tableModel);
+        UIHelper.styleTable(table, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
-        // TEMA DAN RENDERER TABEL
-        table.setBackground(CARD_BG_COLOR);
-        table.setForeground(new Color(60, 60, 60));
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setRowHeight(60); // DITINGGIKAN AGAR WRAP TEXT BISA TURUN KE BAWAH
-        table.setShowGrid(false);
-        table.setShowHorizontalLines(true);
-        table.setGridColor(new Color(230, 230, 235));
-        table.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 80%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader tableHeader = table.getTableHeader();
-        tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tableHeader.setOpaque(false);
-        tableHeader.setBackground(new Color(235, 238, 245)); 
-        tableHeader.setForeground(SIDEBAR_MAIN_COLOR);
-        ((DefaultTableCellRenderer) tableHeader.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-        
-        // Atur lebar kolom
         table.getColumnModel().getColumn(0).setPreferredWidth(80);
         table.getColumnModel().getColumn(1).setPreferredWidth(180);
         table.getColumnModel().getColumn(2).setPreferredWidth(150);
         table.getColumnModel().getColumn(3).setPreferredWidth(200);
         table.getColumnModel().getColumn(4).setPreferredWidth(150);
 
-        // Pasang Renderer Rata Kiri & Wrap Text
         DefaultTableCellRenderer topLeftRenderer = new DefaultTableCellRenderer();
         topLeftRenderer.setVerticalAlignment(SwingConstants.TOP);
         topLeftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
 
         table.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
         table.getColumnModel().getColumn(1).setCellRenderer(textWrapper); 
@@ -303,9 +269,7 @@ public class FormDashboard extends Form {
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 11)); 
         sub.setForeground(new Color(255,255,255,160));
         
-        card.add(lbT); 
-        card.add(val); 
-        card.add(sub); 
+        card.add(lbT); card.add(val); card.add(sub); 
         return card;
     }
 
@@ -322,9 +286,7 @@ public class FormDashboard extends Form {
         lblValue.setFont(new Font("Segoe UI", Font.BOLD, 32)); 
         lblValue.setForeground(SIDEBAR_MAIN_COLOR); 
 
-        card.add(lblTitle);
-        card.add(lblValue);
-        
+        card.add(lblTitle); card.add(lblValue);
         return card;
     }
 
@@ -336,10 +298,8 @@ public class FormDashboard extends Form {
         String currentMonthValue = now.format(DateTimeFormatter.ofPattern("yyyy-MM"));
         String currentMonthDisplay = formatNamaBulan(currentMonthValue);
         
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT DISTINCT DATE_FORMAT(tgl_ambil, '%Y-%m') as bulan_tahun FROM data_pengambilan ORDER BY bulan_tahun DESC";
-            ResultSet rs = kon.createStatement().executeQuery(sql);
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             ResultSet rs = kon.createStatement().executeQuery("SELECT DISTINCT DATE_FORMAT(tgl_ambil, '%Y-%m') as bulan_tahun FROM data_pengambilan ORDER BY bulan_tahun DESC")) {
             
             boolean hasCurrentMonth = false;
             while (rs.next()) {
@@ -354,11 +314,8 @@ public class FormDashboard extends Form {
                 cbBulan.insertItemAt(currentMonthDisplay, 0);
                 mapBulan.put(currentMonthDisplay, currentMonthValue);
             }
-            
             cbBulan.setSelectedIndex(0);
-        } catch (Exception e) {
-            System.err.println("Gagal memuat daftar bulan: " + e.getMessage());
-        }
+        } catch (Exception e) {}
     }
     
     private String formatNamaBulan(String yyyyMM) {
@@ -366,9 +323,7 @@ public class FormDashboard extends Form {
             YearMonth ym = YearMonth.parse(yyyyMM);
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM yyyy", new Locale("id", "ID"));
             return ym.format(formatter);
-        } catch (Exception e) {
-            return yyyyMM;
-        }
+        } catch (Exception e) { return yyyyMM; }
     }
 
     private void loadDashboardData() {
@@ -384,77 +339,48 @@ public class FormDashboard extends Form {
 
             @Override
             protected Void doInBackground() throws Exception {
-                Connection kon = DatabaseConnection.getKoneksi();
+                try (Connection kon = DatabaseConnection.getKoneksi()) {
+                    
+                    String sqlHari = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, COUNT(dp.id_pengambilan) AS jml FROM data_pengambilan dp LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan WHERE DATE(dp.tgl_ambil) = CURDATE()";
+                    try (ResultSet rsHari = kon.createStatement().executeQuery(sqlHari)) {
+                        if(rsHari.next()) {
+                            pendapatanHari = formatRupiah.format(rsHari.getDouble("omzet"));
+                            labaHari = formatRupiah.format(rsHari.getDouble("laba"));
+                            subHari = "Dari " + rsHari.getInt("jml") + " transaksi hari ini";
+                        }
+                    }
 
-                // 1. HITUNG OMZET & LABA HARI INI (SUDAH DIPERBAIKI UNTUK STRUKTUR MANY-TO-MANY)
-                String sqlHari = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, " +
-                                 "IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, " +
-                                 "COUNT(dp.id_pengambilan) AS jml " +
-                                 "FROM data_pengambilan dp " +
-                                 "LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit " +
-                                 "FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
-                                 "GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan " +
-                                 "WHERE DATE(dp.tgl_ambil) = CURDATE()";
-                ResultSet rsHari = kon.createStatement().executeQuery(sqlHari);
-                if(rsHari.next()) {
-                    pendapatanHari = formatRupiah.format(rsHari.getDouble("omzet"));
-                    labaHari = formatRupiah.format(rsHari.getDouble("laba"));
-                    subHari = "Dari " + rsHari.getInt("jml") + " transaksi hari ini";
-                }
+                    String sqlBulan = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, COUNT(dp.id_pengambilan) AS jml FROM data_pengambilan dp LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan WHERE DATE_FORMAT(dp.tgl_ambil, '%Y-%m') = ?";
+                    try (PreparedStatement psBulan = kon.prepareStatement(sqlBulan)) {
+                        psBulan.setString(1, selectedMonthVal);
+                        try (ResultSet rsBulan = psBulan.executeQuery()) {
+                            if(rsBulan.next()) {
+                                pendapatanBulan = formatRupiah.format(rsBulan.getDouble("omzet"));
+                                labaBulan = formatRupiah.format(rsBulan.getDouble("laba"));
+                                subBulan = "Total " + rsBulan.getInt("jml") + " transaksi di " + selectedMonthDisplay;
+                            }
+                        }
+                    }
 
-                // 2. HITUNG OMZET & LABA BULANAN (SUDAH DIPERBAIKI UNTUK STRUKTUR MANY-TO-MANY)
-                String sqlBulan = "SELECT IFNULL(SUM(dp.total_bayar), 0) AS omzet, " +
-                                  "IFNULL(SUM(dp.biaya_jasa + COALESCE(sub.profit, 0)), 0) AS laba, " +
-                                  "COUNT(dp.id_pengambilan) AS jml " +
-                                  "FROM data_pengambilan dp " +
-                                  "LEFT JOIN (SELECT det.id_pengambilan, SUM(det.qty * (sp.harga_jual - sp.harga_modal)) as profit " +
-                                  "FROM detail_pengambilan_sparepart det JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
-                                  "GROUP BY det.id_pengambilan) sub ON dp.id_pengambilan = sub.id_pengambilan " +
-                                  "WHERE DATE_FORMAT(dp.tgl_ambil, '%Y-%m') = ?";
-                PreparedStatement psBulan = kon.prepareStatement(sqlBulan);
-                psBulan.setString(1, selectedMonthVal);
-                ResultSet rsBulan = psBulan.executeQuery();
-                if(rsBulan.next()) {
-                    pendapatanBulan = formatRupiah.format(rsBulan.getDouble("omzet"));
-                    labaBulan = formatRupiah.format(rsBulan.getDouble("laba"));
-                    subBulan = "Total " + rsBulan.getInt("jml") + " transaksi di " + selectedMonthDisplay;
-                }
+                    try (ResultSet rsMasuk = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Antrean'")) { if(rsMasuk.next()) masuk = rsMasuk.getInt("c"); }
+                    try (ResultSet rsProses = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status NOT IN ('Selesai', 'Diambil', 'Batal', 'Antrean', 'Menunggu Sparepart')")) { if(rsProses.next()) proses = rsProses.getInt("c"); }
+                    try (ResultSet rsSparepart = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Menunggu Sparepart'")) { if(rsSparepart.next()) sparepart = rsSparepart.getInt("c"); }
+                    try (ResultSet rsSiap = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Selesai'")) { if(rsSiap.next()) siap = rsSiap.getInt("c"); }
+                    try (ResultSet rsSelesai = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Diambil'")) { if(rsSelesai.next()) selesai = rsSelesai.getInt("c"); }
 
-                // 3. METRIK OPERASIONAL (Penyesuaian nama status agar akurat)
-                ResultSet rsMasuk = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Antrean'");
-                if(rsMasuk.next()) masuk = rsMasuk.getInt("c");
-
-                ResultSet rsProses = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status NOT IN ('Selesai', 'Diambil', 'Batal', 'Antrean', 'Menunggu Sparepart')");
-                if(rsProses.next()) proses = rsProses.getInt("c");
-
-                ResultSet rsSparepart = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Menunggu Sparepart'");
-                if(rsSparepart.next()) sparepart = rsSparepart.getInt("c");
-
-                ResultSet rsSiap = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Selesai'");
-                if(rsSiap.next()) siap = rsSiap.getInt("c");
-                
-                ResultSet rsSelesai = kon.createStatement().executeQuery("SELECT COUNT(id_servis) AS c FROM data_servis_lengkap WHERE status = 'Diambil'");
-                if(rsSelesai.next()) selesai = rsSelesai.getInt("c");
-
-                // 4. TABEL ANTREAN PRIORITAS
-                tableModel.setRowCount(0); 
-                String sqlTable = "SELECT s.id_servis, p.nama_pelanggan, " +
-                        "CONCAT(pr.merek, ' ', pr.tipe_model) AS perangkat, " + 
-                        "s.keluhan_awal, s.status " +
-                        "FROM data_servis_lengkap s " +
-                        "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
-                        "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
-                        "WHERE s.status NOT IN ('Diambil', 'Batal') " +
-                        "ORDER BY s.tgl_masuk DESC";
-                ResultSet rsTable = kon.createStatement().executeQuery(sqlTable);
-                while (rsTable.next()) {
-                    publish(new Object[]{
-                        String.format("N%05d", rsTable.getInt("id_servis")),
-                        rsTable.getString("nama_pelanggan"),
-                        rsTable.getString("perangkat"), // TYPO SUDAH DIPERBAIKI DISINI
-                        rsTable.getString("keluhan_awal"),
-                        rsTable.getString("status")
-                    });
+                    tableModel.setRowCount(0); 
+                    String sqlTable = "SELECT s.id_servis, p.nama_pelanggan, CONCAT(pr.merek, ' ', pr.tipe_model) AS perangkat, s.keluhan_awal, s.status FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat WHERE s.status NOT IN ('Diambil', 'Batal') ORDER BY s.tgl_masuk DESC";
+                    try (ResultSet rsTable = kon.createStatement().executeQuery(sqlTable)) {
+                        while (rsTable.next()) {
+                            publish(new Object[]{
+                                String.format("N%05d", rsTable.getInt("id_servis")),
+                                rsTable.getString("nama_pelanggan"),
+                                rsTable.getString("perangkat"),
+                                rsTable.getString("keluhan_awal"),
+                                rsTable.getString("status")
+                            });
+                        }
+                    }
                 }
                 return null;
             }
@@ -470,52 +396,18 @@ public class FormDashboard extends Form {
             protected void done() {
                 try {
                     get(); 
-                    lblValPendapatanHari.setText(pendapatanHari.replace(",00", ""));
-                    lblSubPendapatanHari.setText(subHari);
-                    
+                    lblValPendapatanHari.setText(pendapatanHari.replace(",00", "")); lblSubPendapatanHari.setText(subHari);
                     lblValLabaHari.setText(labaHari.replace(",00", ""));
-                    
-                    lblValPendapatanBulan.setText(pendapatanBulan.replace(",00", ""));
-                    lblSubPendapatanBulan.setText(subBulan);
-                    
+                    lblValPendapatanBulan.setText(pendapatanBulan.replace(",00", "")); lblSubPendapatanBulan.setText(subBulan);
                     lblValLabaBulan.setText(labaBulan.replace(",00", ""));
-                    
-                    lblValServisMasuk.setText(String.valueOf(masuk));
-                    lblValSedangDikerjakan.setText(String.valueOf(proses));
-                    lblValMenungguSp.setText(String.valueOf(sparepart));
-                    lblValSiapDiambil.setText(String.valueOf(siap));
+                    lblValServisMasuk.setText(String.valueOf(masuk)); lblValSedangDikerjakan.setText(String.valueOf(proses));
+                    lblValMenungguSp.setText(String.valueOf(sparepart)); lblValSiapDiambil.setText(String.valueOf(siap));
                     lblValServisSelesai.setText(String.valueOf(selesai));
-                    
                 } catch (Exception e) {
-                    System.err.println("Gagal memuat dashboard: " + e.getMessage());
                     e.printStackTrace(); 
                 }
             }
         };
         worker.execute();
-    }
-    
-    // KELAS RENDERER
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); // Padding Atas, Kiri, Bawah, Kanan
-            setOpaque(true);
-        }
-
-        @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
-            return this;
-        }
     }
 }

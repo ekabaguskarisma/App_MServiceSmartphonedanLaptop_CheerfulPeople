@@ -4,20 +4,20 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
-import java.awt.event.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.CallableStatement; // IMPORT BARU UNTUK STORED PROCEDURE
+import java.sql.CallableStatement; 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
+import java.awt.event.*;
 
 public class FormPengerjaanStatus extends Form {
 
@@ -110,7 +110,8 @@ public class FormPengerjaanStatus extends Form {
         pBtn.add(btnUpdate, "grow"); pBtn.add(btnBersih, "grow");
         panelForm.add(pBtn, "gapy 15");
 
-        JScrollPane scrollKiri = createCustomScroll(panelForm);
+        // MEMANGGIL SCROLL DARI UIHELPER
+        JScrollPane scrollKiri = UIHelper.createCustomScroll(panelForm);
         
         // TABEL PEKERJAAN
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
@@ -150,7 +151,9 @@ public class FormPengerjaanStatus extends Form {
         String[] kolom = {"No.", "ID Nota", "Pelanggan", "Perangkat", "Status", "ID_Asli"};
         tableModel = new DefaultTableModel(kolom, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
         tablePekerjaan = new JTable(tableModel);
-        styleTable(tablePekerjaan);
+        
+        // MEMANGGIL STYLING TABEL DARI UIHELPER
+        UIHelper.styleTable(tablePekerjaan, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
         tablePekerjaan.getColumnModel().getColumn(0).setPreferredWidth(50);
         tablePekerjaan.getColumnModel().getColumn(1).setPreferredWidth(90);
@@ -158,10 +161,20 @@ public class FormPengerjaanStatus extends Form {
         tablePekerjaan.getColumnModel().getColumn(3).setPreferredWidth(180);
         tablePekerjaan.getColumnModel().getColumn(4).setPreferredWidth(120);
         
-        // Sembunyikan ID Database Asli
         tablePekerjaan.getColumnModel().getColumn(5).setMinWidth(0);
         tablePekerjaan.getColumnModel().getColumn(5).setMaxWidth(0);
         tablePekerjaan.getColumnModel().getColumn(5).setWidth(0);
+
+        DefaultTableCellRenderer top = new DefaultTableCellRenderer();
+        top.setVerticalAlignment(SwingConstants.TOP); top.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // MEMANGGIL TEXT WRAPPER DARI UIHELPER
+        UIHelper.WrapTextRenderer wrap = new UIHelper.WrapTextRenderer();
+        tablePekerjaan.getColumnModel().getColumn(0).setCellRenderer(top);
+        tablePekerjaan.getColumnModel().getColumn(1).setCellRenderer(top);
+        tablePekerjaan.getColumnModel().getColumn(2).setCellRenderer(wrap);
+        tablePekerjaan.getColumnModel().getColumn(3).setCellRenderer(wrap);
+        tablePekerjaan.getColumnModel().getColumn(4).setCellRenderer(top);
 
         rowSorter = new TableRowSorter<>(tableModel);
         tablePekerjaan.setRowSorter(rowSorter);
@@ -225,67 +238,12 @@ public class FormPengerjaanStatus extends Form {
         return tf;
     }
 
-    private JScrollPane createCustomScroll(JPanel p) {
-        JScrollPane s = new JScrollPane(p); s.setBorder(null); s.setOpaque(false); s.getViewport().setOpaque(false);
-        s.getVerticalScrollBar().setUnitIncrement(15);
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
-        return s;
-    }
-
-    private void styleTable(JTable tb) {
-        tb.setRowHeight(60); tb.setShowGrid(false); tb.setShowHorizontalLines(true);
-        tb.setGridColor(new Color(230, 230, 235));
-        tb.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 80%); selectionForeground:#000000; selectionArc:10");
-        JTableHeader h = tb.getTableHeader();
-        h.setFont(new Font("Segoe UI", Font.BOLD, 13)); h.setBackground(TABLE_HEADER_BG); h.setForeground(SIDEBAR_MAIN_COLOR);
-        ((DefaultTableCellRenderer)h.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-        
-        DefaultTableCellRenderer top = new DefaultTableCellRenderer();
-        top.setVerticalAlignment(SwingConstants.TOP); top.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        WrapTextRenderer wrap = new WrapTextRenderer();
-        tb.getColumnModel().getColumn(0).setCellRenderer(top);
-        tb.getColumnModel().getColumn(1).setCellRenderer(top);
-        tb.getColumnModel().getColumn(2).setCellRenderer(wrap);
-        tb.getColumnModel().getColumn(3).setCellRenderer(wrap);
-        tb.getColumnModel().getColumn(4).setCellRenderer(top);
-    }
-
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff"); }});
-        tp.add(new JLabel(message) {{ putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)"); }});
-        
-        p.add(new JLabel(icon), "top"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
     private void loadPekerjaanAktif() {
         tableModel.setRowCount(0);
         int total = 0, no = 1;
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status " +
-                         "FROM data_servis_lengkap s " +
-                         "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
-                         "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
-                         "WHERE s.status NOT IN ('Selesai', 'Diambil', 'Batal') ORDER BY s.id_servis ASC";
-            ResultSet rs = kon.createStatement().executeQuery(sql);
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             ResultSet rs = kon.createStatement().executeQuery("SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat WHERE s.status NOT IN ('Selesai', 'Diambil', 'Batal') ORDER BY s.id_servis ASC")) {
+             
             while(rs.next()){
                 tableModel.addRow(new Object[]{
                     no++, "N" + String.format("%05d", rs.getInt("id_servis")),
@@ -299,57 +257,52 @@ public class FormPengerjaanStatus extends Form {
     }
 
     private void loadDetailPengerjaan(String id) {
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT keluhan_awal, hasil_diagnosa, tindakan_perbaikan, status FROM data_servis_lengkap WHERE id_servis = ?";
-            PreparedStatement ps = kon.prepareStatement(sql); ps.setString(1, id);
-            ResultSet rs = ps.executeQuery();
-            if(rs.next()){
-                txtKeluhan.setText(rs.getString("keluhan_awal"));
-                txtDiagnosa.setText(rs.getString("hasil_diagnosa"));
-                txtTindakan.setText(rs.getString("tindakan_perbaikan"));
-                cbStatus.setSelectedItem(rs.getString("status"));
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             PreparedStatement ps = kon.prepareStatement("SELECT keluhan_awal, hasil_diagnosa, tindakan_perbaikan, status FROM data_servis_lengkap WHERE id_servis = ?")) {
+            ps.setString(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if(rs.next()){
+                    txtKeluhan.setText(rs.getString("keluhan_awal"));
+                    txtDiagnosa.setText(rs.getString("hasil_diagnosa"));
+                    txtTindakan.setText(rs.getString("tindakan_perbaikan"));
+                    cbStatus.setSelectedItem(rs.getString("status"));
+                }
             }
         } catch (Exception e) {}
     }
 
     private void updateProgresServis() {
-        if (selectedIdServis.isEmpty()) { tampilkanNotif("Peringatan", "Pilih pekerjaan dari tabel terlebih dahulu!", "warning"); return; }
+        if (selectedIdServis.isEmpty()) { UIHelper.tampilkanNotif(this, "Peringatan", "Pilih pekerjaan dari tabel terlebih dahulu!", "warning"); return; }
         
         String diagnosa = txtDiagnosa.getText().trim();
         String tindakan = txtTindakan.getText().trim();
         String status = cbStatus.getSelectedItem().toString();
         String idNota = txtID.getText();
         
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
+        try (Connection kon = DatabaseConnection.getKoneksi()) {
             
-            // Kalkulasi Persentase untuk di DB
             int persen = 10; 
             if(status.equalsIgnoreCase("Proses")) persen = 50;
             else if(status.equalsIgnoreCase("Menunggu Sparepart")) persen = 25;
             else if(status.equalsIgnoreCase("Selesai")) persen = 100;
             else if(status.equalsIgnoreCase("Batal")) persen = 0;
 
-            // =========================================================================
-            // PERBAIKAN: MENGGUNAKAN STORED PROCEDURE (MEMENUHI SYARAT MODUL BASIS DATA)
-            // =========================================================================
             String sqlCall = "{CALL sp_simpan_progres_teknisi(?, ?, ?, ?, ?)}";
-            CallableStatement cs = kon.prepareCall(sqlCall);
-            cs.setInt(1, Integer.parseInt(selectedIdServis));
-            cs.setString(2, diagnosa);
-            cs.setString(3, tindakan);
-            cs.setString(4, status);
-            cs.setInt(5, persen);
+            try (CallableStatement cs = kon.prepareCall(sqlCall)) {
+                cs.setInt(1, Integer.parseInt(selectedIdServis));
+                cs.setString(2, diagnosa);
+                cs.setString(3, tindakan);
+                cs.setString(4, status);
+                cs.setInt(5, persen);
+                
+                cs.executeUpdate();
+            }
             
-            // Eksekusi Stored Procedure
-            cs.executeUpdate();
-            
-            tampilkanNotif("Berhasil", "Progres servis " + idNota + " telah diperbarui!", "success");
+            UIHelper.tampilkanNotif(this, "Berhasil", "Progres servis " + idNota + " telah diperbarui!", "success");
             loadPekerjaanAktif(); resetForm();
             
         } catch (Exception e) { 
-            tampilkanNotif("Error", "Gagal memanggil Stored Procedure: " + e.getMessage(), "error"); 
+            UIHelper.tampilkanNotif(this, "Error", "Gagal memanggil Stored Procedure: " + e.getMessage(), "error"); 
         }
     }
 
@@ -357,12 +310,5 @@ public class FormPengerjaanStatus extends Form {
         selectedIdServis = ""; txtID.setText(""); txtNama.setText(""); txtPerangkat.setText("");
         txtKeluhan.setText(""); txtDiagnosa.setText(""); txtTindakan.setText("");
         cbStatus.setSelectedIndex(0); tablePekerjaan.clearSelection();
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() { setLineWrap(true); setWrapStyleWord(true); setFont(new Font("Segoe UI", Font.PLAIN, 14)); setMargin(new java.awt.Insets(10, 10, 10, 10)); setOpaque(true); }
-        @Override public java.awt.Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean h, int r, int c) {
-            setText(v != null ? v.toString() : ""); if (s) { setBackground(t.getSelectionBackground()); setForeground(t.getSelectionForeground()); } else { setBackground(t.getBackground()); setForeground(t.getForeground()); } return this;
-        }
     }
 }

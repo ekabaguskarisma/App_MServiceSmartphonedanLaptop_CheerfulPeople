@@ -193,7 +193,7 @@ public class DialogUpdateProgres extends JDialog {
 
     private void loadCurrentData() {
         try {
-            Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksi(); // Read-only tidak butuh koneksi transaksi
             String sql = "SELECT status_servis, persentase, keterangan FROM tb_progres_servis WHERE id_nota = ?";
             PreparedStatement ps = kon.prepareStatement(sql);
             ps.setString(1, idNota);
@@ -220,47 +220,54 @@ public class DialogUpdateProgres extends JDialog {
 
     private void simpanProgres() {
         String status = cbStatus.getSelectedItem().toString();
-        int persen = sliderPersen.getValue(); // Ini sudah pasti valid karena sistem pengaman di atas
+        int persen = sliderPersen.getValue(); 
         String log = txtLog.getText().trim();
         int idServisInt = Integer.parseInt(idNota.replace("N", ""));
 
         try {
-            Connection kon = DatabaseConnection.getKoneksi();
+            // MENGGUNAKAN JALUR KHUSUS UNTUK TRANSAKSI
+            Connection kon = DatabaseConnection.getKoneksiTransaksi();
             kon.setAutoCommit(false); 
 
-            String sqlCek = "SELECT id_nota FROM tb_progres_servis WHERE id_nota = ?";
-            PreparedStatement psCek = kon.prepareStatement(sqlCek);
-            psCek.setString(1, idNota);
-            ResultSet rs = psCek.executeQuery();
-            
-            if (rs.next()) {
-                String sqlUpd = "UPDATE tb_progres_servis SET status_servis=?, persentase=?, keterangan=? WHERE id_nota=?";
-                PreparedStatement psUpd = kon.prepareStatement(sqlUpd);
-                psUpd.setString(1, status); psUpd.setInt(2, persen); psUpd.setString(3, log); psUpd.setString(4, idNota);
-                psUpd.executeUpdate();
-            } else {
-                String sqlIns = "INSERT INTO tb_progres_servis (id_nota, status_servis, persentase, keterangan) VALUES (?, ?, ?, ?)";
-                PreparedStatement psIns = kon.prepareStatement(sqlIns);
-                psIns.setString(1, idNota); psIns.setString(2, status); psIns.setInt(3, persen); psIns.setString(4, log);
-                psIns.executeUpdate();
+            try {
+                String sqlCek = "SELECT id_nota FROM tb_progres_servis WHERE id_nota = ?";
+                PreparedStatement psCek = kon.prepareStatement(sqlCek);
+                psCek.setString(1, idNota);
+                ResultSet rs = psCek.executeQuery();
+                
+                if (rs.next()) {
+                    String sqlUpd = "UPDATE tb_progres_servis SET status_servis=?, persentase=?, keterangan=? WHERE id_nota=?";
+                    PreparedStatement psUpd = kon.prepareStatement(sqlUpd);
+                    psUpd.setString(1, status); psUpd.setInt(2, persen); psUpd.setString(3, log); psUpd.setString(4, idNota);
+                    psUpd.executeUpdate();
+                } else {
+                    String sqlIns = "INSERT INTO tb_progres_servis (id_nota, status_servis, persentase, keterangan) VALUES (?, ?, ?, ?)";
+                    PreparedStatement psIns = kon.prepareStatement(sqlIns);
+                    psIns.setString(1, idNota); psIns.setString(2, status); psIns.setInt(3, persen); psIns.setString(4, log);
+                    psIns.executeUpdate();
+                }
+
+                String mainStatus = "Proses"; 
+                if (status.equals("Menunggu Sparepart")) mainStatus = "Menunggu Sparepart";
+                if (status.equals("Selesai (Siap Diambil)") || persen == 100) mainStatus = "Selesai";
+
+                String sqlSync = "UPDATE data_servis_lengkap SET status=? WHERE id_servis=?";
+                PreparedStatement psSync = kon.prepareStatement(sqlSync);
+                psSync.setString(1, mainStatus);
+                psSync.setInt(2, idServisInt);
+                psSync.executeUpdate();
+
+                kon.commit();
+                tampilkanNotif("Berhasil!", "Progres servis " + idNota + " telah diperbarui.", "success");
+                dispose();
+            } catch (Exception ex) {
+                kon.rollback();
+                throw ex; // Melempar error agar ditangkap oleh catch utama
+            } finally {
+                kon.close(); // MENUTUP KONEKSI AGAR MEMORI TIDAK BOCOR
             }
 
-            String mainStatus = "Proses"; 
-            if (status.equals("Menunggu Sparepart")) mainStatus = "Menunggu Sparepart";
-            if (status.equals("Selesai (Siap Diambil)") || persen == 100) mainStatus = "Selesai";
-
-            String sqlSync = "UPDATE data_servis_lengkap SET status=? WHERE id_servis=?";
-            PreparedStatement psSync = kon.prepareStatement(sqlSync);
-            psSync.setString(1, mainStatus);
-            psSync.setInt(2, idServisInt);
-            psSync.executeUpdate();
-
-            kon.commit();
-            tampilkanNotif("Berhasil!", "Progres servis " + idNota + " telah diperbarui.", "success");
-            dispose();
-
         } catch (Exception e) {
-            try { DatabaseConnection.getKoneksi().rollback(); } catch(Exception ex){}
             tampilkanNotif("Gagal Update", e.getMessage(), "error");
         }
     }

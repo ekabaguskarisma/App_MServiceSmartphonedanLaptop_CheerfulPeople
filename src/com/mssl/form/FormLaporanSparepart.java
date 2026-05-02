@@ -4,8 +4,9 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
-import java.awt.event.*;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.NumberFormat;
@@ -15,7 +16,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
 
@@ -29,6 +29,7 @@ public class FormLaporanSparepart extends Form {
     private TableRowSorter<DefaultTableModel> rowSorter;
     private JLabel lblTotalItem, lblStokMenipis, lblTotalAset;
     private boolean isRefreshing = false;
+    
     private final Color APP_BG_COLOR = new Color(245, 245, 248);
     private final Color CARD_BG_COLOR = Color.WHITE;
     private final Color SIDEBAR_MAIN_COLOR = new Color(40, 45, 60);
@@ -118,7 +119,6 @@ public class FormLaporanSparepart extends Form {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16)); 
         } catch (Exception e) {}
         
-        // --- TAMBAHAN FITUR ENTER PENCARIAN ---
         txtSearch.addActionListener(e -> loadDataSparepart());
 
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
@@ -167,28 +167,13 @@ public class FormLaporanSparepart extends Form {
         p.setBackground(CARD_BG_COLOR);
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20");
 
-        // PERBAIKAN: Menambah kolom No. Urut
         String[] columns = {"No.", "Kode", "Nama Sparepart", "Kategori", "Stok", "Harga Modal", "Harga Jual"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         tableSparepart = new JTable(tableModel);
-        
-        tableSparepart.setBackground(Color.WHITE);
-        tableSparepart.setForeground(new Color(60, 60, 60));
-        tableSparepart.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tableSparepart.setRowHeight(60); 
-        tableSparepart.setShowGrid(false);
-        tableSparepart.setShowHorizontalLines(true);
-        tableSparepart.setGridColor(new Color(230, 230, 235));
-        tableSparepart.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 85%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader header = tableSparepart.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setOpaque(false);
-        header.setBackground(TABLE_HEADER_BG);
-        header.setForeground(SIDEBAR_MAIN_COLOR);
+        UIHelper.styleTable(tableSparepart, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
 
         tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(50);  // No
         tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(100); // Kode
@@ -209,13 +194,11 @@ public class FormLaporanSparepart extends Form {
         tableSparepart.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
         tableSparepart.getColumnModel().getColumn(6).setCellRenderer(topLeftRenderer);
 
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         tableSparepart.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
 
         StockRenderer stockRenderer = new StockRenderer();
         tableSparepart.getColumnModel().getColumn(4).setCellRenderer(stockRenderer);
-
-        ((DefaultTableCellRenderer) tableSparepart.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
 
         rowSorter = new TableRowSorter<>(tableModel);
         tableSparepart.setRowSorter(rowSorter);
@@ -249,7 +232,11 @@ public class FormLaporanSparepart extends Form {
         } catch(Exception e){}
 
         btnEkspor.addActionListener(e -> {
-            tampilkanNotif("Info Pengembangan", "Fitur Ekspor Laporan (Excel/PDF) sedang dalam tahap pengembangan.", "warning");
+            if (tableSparepart.getRowCount() == 0) {
+                UIHelper.tampilkanNotif(this, "Peringatan", "Tidak ada data untuk diekspor!", "warning");
+                return;
+            }
+            UIHelper.exportToCSV(this, tableSparepart, "Laporan_Stok_Sparepart");
         });
 
         p.add(btnEkspor, "height 45!");
@@ -289,10 +276,11 @@ public class FormLaporanSparepart extends Form {
                 
                 sql.append(" ORDER BY nama_sparepart ASC"); 
 
-                java.sql.Connection conn = DatabaseConnection.getKoneksi();
                 NumberFormat formatRupiah = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
 
-                try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                try (Connection conn = DatabaseConnection.getKoneksi();
+                     PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                     
                     int paramIndex = 1;
                     
                     if (!keyword.isEmpty()) {
@@ -345,62 +333,11 @@ public class FormLaporanSparepart extends Form {
                     lblTotalAset.setText(formatRupiah.format(totalAset).replace(",00", ""));
                     
                 } catch (Exception e) {
-                    tampilkanNotif("Database Error", "Gagal memuat data dari database: " + e.getMessage(), "error");
+                    UIHelper.tampilkanNotif(FormLaporanSparepart.this, "Database Error", "Gagal memuat data dari database: " + e.getMessage(), "error");
                 }
             }
         };
         worker.execute();
-    }
-    
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); 
-            setOpaque(true);
-        }
-
-        @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
-            return this;
-        }
     }
 
     class StockRenderer extends DefaultTableCellRenderer {

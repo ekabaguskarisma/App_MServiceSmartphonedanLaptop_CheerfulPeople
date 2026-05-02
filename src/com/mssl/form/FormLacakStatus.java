@@ -3,8 +3,10 @@ package com.mssl.form;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.*;
@@ -12,7 +14,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
 
@@ -80,11 +81,10 @@ public class FormLacakStatus extends Form {
         txtSearch.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:5,10,5,10");
         try { txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16)); } catch (Exception e) {}
 
-        // --- TAMBAHAN FITUR ENTER PADA PENCARIAN LACAK STATUS ---
         txtSearch.addActionListener(e -> {
             if (tableMonitoring.getRowCount() > 0) {
-                tableMonitoring.setRowSelectionInterval(0, 0); // Sorot hasil
-                bukaFormUpdate(); // Langsung buka pop-up edit progres
+                tableMonitoring.setRowSelectionInterval(0, 0); 
+                bukaFormUpdate(); 
             }
         });
 
@@ -133,27 +133,13 @@ public class FormLacakStatus extends Form {
         p.setBackground(CARD_BG_COLOR);
         p.putClientProperty(FlatClientProperties.STYLE, "arc:20");
 
-        // PERBAIKAN: Menambahkan kolom No. Urut Visual
         String[] columns = {"No.", "ID Nota", "Pelanggan", "Perangkat", "Status Terakhir", "Progres"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         tableMonitoring = new JTable(tableModel);
-        tableMonitoring.setBackground(Color.WHITE);
-        tableMonitoring.setForeground(new Color(60, 60, 60));
-        tableMonitoring.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tableMonitoring.setRowHeight(60);
-        tableMonitoring.setShowGrid(false);
-        tableMonitoring.setShowHorizontalLines(true);
-        tableMonitoring.setGridColor(new Color(230, 230, 235));
-        tableMonitoring.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 85%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader header = tableMonitoring.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setOpaque(false);
-        header.setBackground(TABLE_HEADER_BG);
-        header.setForeground(SIDEBAR_MAIN_COLOR);
+        UIHelper.styleTable(tableMonitoring, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
         tableMonitoring.getColumnModel().getColumn(0).setPreferredWidth(50); // No.
         tableMonitoring.getColumnModel().getColumn(1).setPreferredWidth(100); 
@@ -171,12 +157,10 @@ public class FormLacakStatus extends Form {
         tableMonitoring.getColumnModel().getColumn(1).setCellRenderer(topLeftRenderer);
         tableMonitoring.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
 
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         tableMonitoring.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
         tableMonitoring.getColumnModel().getColumn(3).setCellRenderer(textWrapper);
         tableMonitoring.getColumnModel().getColumn(4).setCellRenderer(textWrapper);
-
-        ((DefaultTableCellRenderer) tableMonitoring.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
 
         tableMonitoring.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
@@ -216,11 +200,10 @@ public class FormLacakStatus extends Form {
     private void bukaFormUpdate() {
         int row = tableMonitoring.getSelectedRow();
         if(row == -1) {
-            tampilkanNotif("Peringatan", "Pilih salah satu nota di tabel terlebih dahulu!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Pilih salah satu nota di tabel terlebih dahulu!", "warning");
             return;
         }
         int modelRow = tableMonitoring.convertRowIndexToModel(row);
-        // Karena ada penambahan kolom "No", maka index ID bergeser dari 0 ke 1
         String idNota = tableModel.getValueAt(modelRow, 1).toString();
         String pelanggan = tableModel.getValueAt(modelRow, 2).toString();
         
@@ -243,7 +226,6 @@ public class FormLacakStatus extends Form {
             @Override
             protected Void doInBackground() throws Exception {
                 try {
-                    // --- PEMBARUAN QUERY: MENYEMBUNYIKAN YANG SUDAH 100% ATAU SUDAH DIAMBIL ---
                     StringBuilder sql = new StringBuilder(
                         "SELECT s.id_servis, pel.nama_pelanggan, per.merek, per.tipe_model, p.status_servis, p.persentase " +
                         "FROM data_servis_lengkap s " +
@@ -260,32 +242,29 @@ public class FormLacakStatus extends Form {
                         } else if (filterTahapan.equals("Sedang Dikerjakan")) {
                             sql.append(" AND p.persentase > 20 AND p.persentase < 90");
                         } else if (filterTahapan.equals("Selesai (Siap Diambil)")) {
-                            // Karena sudah dicegah di awal, filter ini otomatis akan menampilkan 0 data
-                            // (Sesuai dengan harapan Anda karena data selesai tidak boleh ada di sini)
                             sql.append(" AND p.persentase >= 100");
                         }
                     }
                     
                     sql.append(" ORDER BY s.id_servis DESC"); 
 
-                    java.sql.Connection conn = com.mssl.koneksi.DatabaseConnection.getKoneksi();
+                    try (Connection conn = com.mssl.koneksi.DatabaseConnection.getKoneksi();
+                         PreparedStatement ps = conn.prepareStatement(sql.toString());
+                         ResultSet res = ps.executeQuery()) {
+                        
+                        int no = 1;
+                        while (res.next()) {
+                            String id = "N" + String.format("%05d", res.getInt("id_servis"));
+                            String nama = res.getString("nama_pelanggan");
+                            String hp = res.getString("merek") + " " + res.getString("tipe_model");
+                            String status = res.getString("status_servis");
+                            
+                            if(status == null) status = "Belum Ada Status";
+                            
+                            int persen = res.getInt("persentase");
+                            String strPersen = persen + "%";
 
-                    try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
-                        try (ResultSet res = ps.executeQuery()) {
-                            int no = 1;
-                            while (res.next()) {
-                                String id = "N" + String.format("%05d", res.getInt("id_servis"));
-                                String nama = res.getString("nama_pelanggan");
-                                String hp = res.getString("merek") + " " + res.getString("tipe_model");
-                                String status = res.getString("status_servis");
-                                
-                                if(status == null) status = "Belum Ada Status";
-                                
-                                int persen = res.getInt("persentase");
-                                String strPersen = persen + "%";
-
-                                publish(new Object[]{no++, id, nama, hp, status, strPersen});
-                            }
+                            publish(new Object[]{no++, id, nama, hp, status, strPersen});
                         }
                     }
                 } catch (Exception e) {
@@ -308,7 +287,7 @@ public class FormLacakStatus extends Form {
                     get(); 
                     liveSearch(); 
                 } catch (Exception e) {
-                    tampilkanNotif("Database Error", "Gagal memuat dari Database: " + errorMsg, "error");
+                    UIHelper.tampilkanNotif(FormLacakStatus.this, "Database Error", "Gagal memuat dari Database: " + errorMsg, "error");
                 }
             }
         };
@@ -321,48 +300,6 @@ public class FormLacakStatus extends Form {
             rowSorter.setRowFilter(null);
         } else {
             rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
-        }
-    }
-
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true); setWrapStyleWord(true); setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); setOpaque(true);
-        }
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) { setBackground(table.getSelectionBackground()); setForeground(table.getSelectionForeground()); } 
-            else { setBackground(table.getBackground()); setForeground(table.getForeground()); }
-            return this;
         }
     }
 }

@@ -2,10 +2,14 @@ package com.mssl.form;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import com.mssl.main.FormManager;
-import java.awt.Color;
+import com.mssl.utils.UIHelper;
 import java.awt.Image;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -103,7 +107,6 @@ public class FormLogin extends Form {
                 + "innerFocusWidth:0;"
                 + "font:bold 16");
 
-        // FITUR ENTER
         txtUsername.addActionListener(e -> btnLogin.doClick());
         txtPassword.addActionListener(e -> btnLogin.doClick());
 
@@ -125,104 +128,72 @@ public class FormLogin extends Form {
             String pass = String.valueOf(txtPassword.getPassword()).trim();
 
             if (user.isEmpty() || pass.isEmpty()) {
-                tampilkanNotif("Peringatan", "Username dan Password tidak boleh kosong!", false);
+                UIHelper.tampilkanNotif(this, "Peringatan", "Username dan Password tidak boleh kosong!", "warning");
                 return;
             }
 
-            try {
-                java.sql.Connection kon = com.mssl.koneksi.DatabaseConnection.getKoneksi();
+            try (Connection kon = DatabaseConnection.getKoneksi()) {
                 
-                // 1. CEK DULU: Apakah ini Karyawan (Admin/Teknisi)?
-                String sqlAdmin = "SELECT * FROM data_pengguna WHERE username=? AND password=?";
-                java.sql.PreparedStatement ps = kon.prepareStatement(sqlAdmin);
-                ps.setString(1, user);
-                ps.setString(2, pass);
-                java.sql.ResultSet rs = ps.executeQuery();
-
-                if (rs.next()) {
-                    String role = rs.getString("role");
-                    String namaLengkap = rs.getString("nama_lengkap");
-                    
-                    FormManager.login(role, user);
-                    tampilkanNotif("Login Berhasil!", "Selamat datang, " + namaLengkap + "!", true);
-                    
-                } else {
-                    // 2. JIKA BUKAN KARYAWAN: Cek apakah ini Pelanggan (User = No Nota, Pass = No WA)
-                    String sqlPelanggan = "SELECT s.id_servis, p.nama_pelanggan FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan WHERE CONCAT('N', LPAD(s.id_servis, 5, '0')) = ? AND p.no_whatsapp = ?";
-                    java.sql.PreparedStatement psPel = kon.prepareStatement(sqlPelanggan);
-                    psPel.setString(1, user);
-                    psPel.setString(2, pass);
-                    java.sql.ResultSet rsPel = psPel.executeQuery();
-                    
-                    if (rsPel.next()) {
-                        String namaPelanggan = rsPel.getString("nama_pelanggan");
-                        FormManager.login("Pelanggan", user); 
-                        tampilkanNotif("Akses Lacak Diberikan", "Halo Kak " + namaPelanggan + "!", true);
-                    } else {
-                        tampilkanNotif("Gagal Masuk", "Username/Nota atau Password salah.", false);
+                // 1. CEK LOGIN ADMIN / TEKNISI (Cek berdasarkan Username dulu)
+                String sqlCekAdmin = "SELECT * FROM data_pengguna WHERE username = ?";
+                try (PreparedStatement ps = kon.prepareStatement(sqlCekAdmin)) {
+                    ps.setString(1, user);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) { // Jika Username Ditemukan
+                            String dbPassword = rs.getString("password");
+                            
+                            // Cocokkan Password
+                            if (dbPassword.equals(pass)) {
+                                String role = rs.getString("role");
+                                String namaLengkap = rs.getString("nama_lengkap");
+                                
+                                FormManager.login(role, user);
+                                UIHelper.tampilkanNotif(FormManager.getJFrame(), "Login Berhasil!", "Selamat datang, " + namaLengkap + "!", "success");
+                            } else {
+                                // Username benar, tapi Password salah
+                                UIHelper.tampilkanNotif(this, "Gagal Masuk", "Password yang Anda masukkan salah!", "error");
+                                txtPassword.setText("");
+                                txtPassword.requestFocus();
+                            }
+                            return; // Hentikan eksekusi karena akun admin sudah dicek
+                        }
                     }
                 }
+
+                // 2. CEK LOGIN PELANGGAN (Jika Username Admin tidak ditemukan)
+                String sqlCekPelanggan = "SELECT s.id_servis, p.nama_pelanggan, p.no_whatsapp " +
+                                         "FROM data_servis_lengkap s " +
+                                         "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
+                                         "WHERE CONCAT('N', LPAD(s.id_servis, 5, '0')) = ?";
+                try (PreparedStatement psPel = kon.prepareStatement(sqlCekPelanggan)) {
+                    psPel.setString(1, user);
+                    try (ResultSet rsPel = psPel.executeQuery()) {
+                        if (rsPel.next()) { // Jika Nomor Nota Ditemukan
+                            String dbWa = rsPel.getString("no_whatsapp");
+                            
+                            // Cocokkan No WA sebagai Password Pelanggan
+                            if (dbWa.equals(pass)) {
+                                String namaPelanggan = rsPel.getString("nama_pelanggan");
+                                FormManager.login("Pelanggan", user); 
+                                UIHelper.tampilkanNotif(FormManager.getJFrame(), "Akses Lacak Diberikan", "Halo Kak " + namaPelanggan + "!", "success");
+                            } else {
+                                // Nota benar, tapi No WA (Password) salah
+                                UIHelper.tampilkanNotif(this, "Gagal Masuk", "Password (No. WhatsApp) yang dimasukkan salah!", "error");
+                                txtPassword.setText("");
+                                txtPassword.requestFocus();
+                            }
+                            return;
+                        }
+                    }
+                }
+                
+                UIHelper.tampilkanNotif(this, "Gagal Masuk", "Username atau Nomor Nota tidak ditemukan / belum terdaftar!", "error");
+                txtUsername.requestFocus();
+
             } catch (Exception ex) {
                 ex.printStackTrace();
-                tampilkanNotif("Error Sistem", "Terjadi kesalahan database: " + ex.getMessage(), false);
+                UIHelper.tampilkanNotif(this, "Error Sistem", "Terjadi kesalahan database: " + ex.getMessage(), "error");
             }
         });
-    }
-
-    private void tampilkanNotif(String title, String message, boolean isSuccess) {
-        String backgroundColor = isSuccess ? "@accentColor" : "#e04f5f"; 
-        String iconPath = isSuccess ? "com/mssl/icon/success.svg" : "com/mssl/icon/error.svg";
-        
-        JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        internalPanel.putClientProperty(FlatClientProperties.STYLE, ""
-                + "arc:20;"  
-                + "background:" + backgroundColor); 
-
-        FlatSVGIcon icon = new FlatSVGIcon(iconPath, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        JLabel lbIcon = new JLabel(icon);
-        
-        JPanel textPanel = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]"));
-        textPanel.setOpaque(false); 
-        
-        JLabel lbTitle = new JLabel(title);
-        lbTitle.putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:rgb(255,255,255)");
-        
-        JLabel lbMessage = new JLabel(message);
-        lbMessage.putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(235,235,235)");
-        
-        textPanel.add(lbTitle);
-        textPanel.add(lbMessage);
-        
-        internalPanel.add(lbIcon, "top, gapy 2");
-        internalPanel.add(textPanel);
-        
-        JButton btnTutup = new JButton("Tutup");
-        btnTutup.putClientProperty(FlatClientProperties.STYLE, ""
-                + "background:rgb(255,255,255);" 
-                + "foreground:" + (isSuccess ? "@accentColor" : "#e04f5f") + ";" 
-                + "font:bold;"
-                + "arc:10;"
-                + "focusWidth:0;"
-                + "innerFocusWidth:0;"
-                + "borderWidth:0");
-        
-        btnTutup.addActionListener(e -> {
-            java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(btnTutup);
-            if (window != null) {
-                window.dispose(); 
-            }
-        });
-
-        javax.swing.JOptionPane.showOptionDialog(
-            this, 
-            internalPanel, 
-            "", 
-            javax.swing.JOptionPane.DEFAULT_OPTION, 
-            javax.swing.JOptionPane.PLAIN_MESSAGE, 
-            null, 
-            new Object[]{btnTutup}, 
-            btnTutup
-        );
     }
 }

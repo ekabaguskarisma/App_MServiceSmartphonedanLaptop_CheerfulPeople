@@ -26,14 +26,12 @@ import javax.swing.border.MatteBorder;
 import net.miginfocom.swing.MigLayout;
 
 public class Menu extends JPanel {
-
     // PALET WARNA TEMA GELAP
     private final Color SIDEBAR_COLOR = new Color(40, 45, 60);     // Warna dasar sidebar
     private final Color HOVER_COLOR = new Color(55, 65, 85);       // Warna saat mouse lewat
     private final Color TEXT_COLOR = Color.WHITE;                  // Warna teks menu
     private final Color ACCENT_ORANGE = new Color(255, 130, 0);    // Oranye khas Cheerful People
     private final Color ACTIVE_BG_COLOR = new Color(255, 130, 0, 30); // Oranye transparan untuk efek glow
-
     private JPanel panelUtama;
     private String userRole = "";
     private MainForm mainForm; 

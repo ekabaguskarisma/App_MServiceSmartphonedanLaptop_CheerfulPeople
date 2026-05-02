@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.Connection;
@@ -84,10 +85,8 @@ public class FormDataPelanggan extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
-        // --- TAMBAHAN FITUR ENTER UNTUK INPUT FORM ---
         txtNama.addActionListener(e -> btnSimpan.doClick());
         txtWa.addActionListener(e -> btnSimpan.doClick());
-        // ---------------------------------------------
         
         btnHapus = new JButton("Hapus");
         btnHapus.setEnabled(false);
@@ -112,7 +111,8 @@ public class FormDataPelanggan extends Form {
         panelBtn.add(btnSimpan, "grow"); panelBtn.add(btnHapus, "grow"); panelBtn.add(btnBersih, "grow");
         panelForm.add(panelBtn, "gapy 15");
 
-        JScrollPane scrollKiri = createCustomScroll(panelForm);
+        // MEMANGGIL FUNGSI SCROLL DARI UIHELPER
+        JScrollPane scrollKiri = UIHelper.createCustomScroll(panelForm);
         
         // TABEL DATA
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
@@ -141,14 +141,12 @@ public class FormDataPelanggan extends Form {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16));
         } catch (Exception e) {}
         
-        // --- TAMBAHAN FITUR ENTER UNTUK PENCARIAN ---
         txtSearch.addActionListener(e -> {
             if (table.getRowCount() > 0) {
-                table.setRowSelectionInterval(0, 0); // Langsung pilih baris pertama hasil pencarian
-                pilihData(); // Langsung isi ke form
+                table.setRowSelectionInterval(0, 0); 
+                pilihData(); 
             }
         });
-        // --------------------------------------------
 
         btnRefresh = new JButton("Refresh Data");
         btnRefresh.setBackground(SIDEBAR_MAIN_COLOR);
@@ -168,20 +166,8 @@ public class FormDataPelanggan extends Form {
         };
         table = new JTable(tableModel);
         
-        table.setBackground(CARD_BG_COLOR);
-        table.setForeground(new Color(60, 60, 60));
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setRowHeight(60); 
-        table.setShowGrid(false);
-        table.setShowHorizontalLines(true);
-        table.setGridColor(new Color(230, 230, 235));
-        table.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 80%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader tableHeader = table.getTableHeader();
-        tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tableHeader.setOpaque(false);
-        tableHeader.setBackground(TABLE_HEADER_BG);
-        tableHeader.setForeground(SIDEBAR_MAIN_COLOR);
+        // MEMANGGIL STYLING TABEL DARI UIHELPER
+        UIHelper.styleTable(table, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
         table.getColumnModel().getColumn(0).setPreferredWidth(50);
         table.getColumnModel().getColumn(1).setPreferredWidth(180);
@@ -201,11 +187,10 @@ public class FormDataPelanggan extends Form {
         table.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
         table.getColumnModel().getColumn(2).setCellRenderer(topLeftRenderer);
 
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        // MEMANGGIL TEXT WRAPPER DARI UIHELPER
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         table.getColumnModel().getColumn(1).setCellRenderer(textWrapper); 
         table.getColumnModel().getColumn(3).setCellRenderer(textWrapper); 
-
-        ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
         
         rowSorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(rowSorter);
@@ -247,7 +232,6 @@ public class FormDataPelanggan extends Form {
         int row = table.getSelectedRow();
         if (row >= 0) {
             int modelRow = table.convertRowIndexToModel(row);
-            // Ambil ID Asli dari kolom rahasia (index 4)
             selectedId = tableModel.getValueAt(modelRow, 4).toString();
             
             txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
@@ -262,68 +246,21 @@ public class FormDataPelanggan extends Form {
         }
     }
 
-    private JScrollPane createCustomScroll(JPanel p) {
-        JScrollPane s = new JScrollPane(p);
-        s.setBorder(null);
-        s.setOpaque(false);
-        s.getViewport().setOpaque(false);
-        s.getVerticalScrollBar().setUnitIncrement(15);
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
-        return s;
-    }
-    
-    // CUSTOM NOTIFICATIONS
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = (type.equals("success")) ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = (type.equals("success")) ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff"); }});
-        tp.add(new JLabel(message) {{ putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)"); }});
-        
-        p.add(new JLabel(icon), "top"); p.add(tp);
-        JButton b = new JButton("Tutup") {{ setCursor(new Cursor(Cursor.HAND_CURSOR)); putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:"+bgColor+"; font:bold; arc:10; borderWidth:0; margin:5,15,5,15"); }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
-    private boolean tampilkanConfirm(String title, String message) {
-        final boolean[] res = {false};
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#e74c3c");
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false);
-        tp.add(new JLabel(title) {{ putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff"); }});
-        tp.add(new JLabel(message) {{ putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)"); }});
-        p.add(new JLabel(new FlatSVGIcon("com/mssl/icon/error.svg", 45, 45) {{ setColorFilter(new FlatSVGIcon.ColorFilter(c->Color.WHITE)); }}), "top"); p.add(tp);
-        JButton bY = new JButton("Ya, Hapus") {{ setCursor(new Cursor(Cursor.HAND_CURSOR)); putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:#e74c3c; font:bold; arc:10; borderWidth:0; margin:5,15,5,15"); }};
-        JButton bB = new JButton("Batal") {{ setCursor(new Cursor(Cursor.HAND_CURSOR)); putClientProperty(FlatClientProperties.STYLE, "background:rgba(255,255,255,0.2); foreground:#ffffff; font:bold; arc:10; borderWidth:0; margin:5,15,5,15"); }};
-        bY.addActionListener(e -> { res[0]=true; Window w=SwingUtilities.getWindowAncestor(bY); if(w!=null) w.dispose(); });
-        bB.addActionListener(e -> { Window w=SwingUtilities.getWindowAncestor(bB); if(w!=null) w.dispose(); });
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{bB, bY}, bB);
-        return res[0];
-    }
-
     private void loadDataDariDatabase() {
         tableModel.setRowCount(0); 
         int total = 0;
         int nomorUrut = 1;
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT * FROM data_pelanggan ORDER BY id_pelanggan DESC";
-            ResultSet rs = kon.createStatement().executeQuery(sql);
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             PreparedStatement ps = kon.prepareStatement("SELECT * FROM data_pelanggan ORDER BY id_pelanggan DESC");
+             ResultSet rs = ps.executeQuery()) { // TRY-WITH-RESOURCES AGAR MEMORI AMAN
+             
             while (rs.next()) {
                 tableModel.addRow(new Object[]{
-                    nomorUrut++, // No. Visual
+                    nomorUrut++, 
                     rs.getString("nama_pelanggan"), 
                     rs.getString("no_whatsapp"), 
                     rs.getString("alamat"),
-                    rs.getInt("id_pelanggan") // ID Asli (Hidden)
+                    rs.getInt("id_pelanggan") 
                 });
                 total++;
             }
@@ -339,79 +276,73 @@ public class FormDataPelanggan extends Form {
         String alamat = txtAlamat.getText().trim();
         
         if (nama.isEmpty() || wa.isEmpty() || alamat.isEmpty()) {
-            tampilkanNotif("Peringatan", "Semua kolom harus diisi!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Semua kolom harus diisi!", "warning");
             return;
         }
         
         if (wa.length() < 9) {
-            tampilkanNotif("Peringatan", "Nomor WhatsApp terlalu pendek (Minimal 9 angka)!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Nomor WhatsApp terlalu pendek (Minimal 9 angka)!", "warning");
             txtWa.requestFocus(); 
             return; 
         }
 
         try {
-            Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksiTransaksi();
             if (selectedId.isEmpty()) {
-                // === MODE INPUT BARU: CEK DUPLIKAT NOMOR WA (UPSERT) ===
                 String sqlCek = "SELECT id_pelanggan FROM data_pelanggan WHERE no_whatsapp = ?";
-                PreparedStatement psCek = kon.prepareStatement(sqlCek);
-                psCek.setString(1, wa);
-                ResultSet rs = psCek.executeQuery();
-
-                if (rs.next()) {
-                    // JIKA NOMOR WA SUDAH ADA -> UPDATE NAMA & ALAMAT
-                    int idExisting = rs.getInt("id_pelanggan");
-
-                    String sqlUpdate = "UPDATE data_pelanggan SET nama_pelanggan = ?, alamat = ? WHERE id_pelanggan = ?";
-                    PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate);
-                    psUpdate.setString(1, nama);
-                    psUpdate.setString(2, alamat);
-                    psUpdate.setInt(3, idExisting);
-                    
-                    if (psUpdate.executeUpdate() > 0) {
-                        tampilkanNotif("Berhasil", "Nomor WA sudah terdaftar. Data pelanggan berhasil diperbarui!", "success");
-                    }
-                } else {
-                    // JIKA NOMOR WA BELUM ADA -> INSERT PELANGGAN BARU
-                    String sqlInsert = "INSERT INTO data_pelanggan (nama_pelanggan, no_whatsapp, alamat) VALUES (?, ?, ?)";
-                    PreparedStatement psInsert = kon.prepareStatement(sqlInsert);
-                    psInsert.setString(1, nama);
-                    psInsert.setString(2, wa);
-                    psInsert.setString(3, alamat);
-                    
-                    if (psInsert.executeUpdate() > 0) {
-                        tampilkanNotif("Berhasil", "Data pelanggan baru berhasil ditambahkan!", "success");
+                try (PreparedStatement psCek = kon.prepareStatement(sqlCek)) {
+                    psCek.setString(1, wa);
+                    try (ResultSet rs = psCek.executeQuery()) {
+                        if (rs.next()) {
+                            int idExisting = rs.getInt("id_pelanggan");
+                            String sqlUpdate = "UPDATE data_pelanggan SET nama_pelanggan = ?, alamat = ? WHERE id_pelanggan = ?";
+                            try (PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate)) {
+                                psUpdate.setString(1, nama); psUpdate.setString(2, alamat); psUpdate.setInt(3, idExisting);
+                                if (psUpdate.executeUpdate() > 0) {
+                                    UIHelper.tampilkanNotif(this, "Berhasil", "Nomor WA sudah terdaftar. Data pelanggan berhasil diperbarui!", "success");
+                                }
+                            }
+                        } else {
+                            String sqlInsert = "INSERT INTO data_pelanggan (nama_pelanggan, no_whatsapp, alamat) VALUES (?, ?, ?)";
+                            try (PreparedStatement psInsert = kon.prepareStatement(sqlInsert)) {
+                                psInsert.setString(1, nama); psInsert.setString(2, wa); psInsert.setString(3, alamat);
+                                if (psInsert.executeUpdate() > 0) {
+                                    UIHelper.tampilkanNotif(this, "Berhasil", "Data pelanggan baru berhasil ditambahkan!", "success");
+                                }
+                            }
+                        }
                     }
                 }
             } else {
-                // === MODE EDIT DARI TABEL ===
                 String sql = "UPDATE data_pelanggan SET nama_pelanggan=?, no_whatsapp=?, alamat=? WHERE id_pelanggan=?";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, nama); ps.setString(2, wa); ps.setString(3, alamat); ps.setString(4, selectedId);
-                if (ps.executeUpdate() > 0) tampilkanNotif("Diperbarui", "Data pelanggan berhasil diupdate!", "success");
+                try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                    ps.setString(1, nama); ps.setString(2, wa); ps.setString(3, alamat); ps.setString(4, selectedId);
+                    if (ps.executeUpdate() > 0) UIHelper.tampilkanNotif(this, "Diperbarui", "Data pelanggan berhasil diupdate!", "success");
+                }
             }
             
             loadDataDariDatabase(); 
             bersihkanForm();
             
         } catch (Exception e) {
-            tampilkanNotif("Error Database", e.getMessage(), "error");
+            UIHelper.tampilkanNotif(this, "Error Database", e.getMessage(), "error");
         }
     }
 
     private void hapusData() {
         if (selectedId.isEmpty()) return;
-        if (tampilkanConfirm("Konfirmasi Hapus", "Yakin ingin menghapus data pelanggan ini dari sistem?")) {
+        if (UIHelper.tampilkanConfirm(this, "Konfirmasi Hapus", "Yakin ingin menghapus data pelanggan ini dari sistem?")) {
             try {
-                Connection kon = DatabaseConnection.getKoneksi();
-                PreparedStatement ps = kon.prepareStatement("DELETE FROM data_pelanggan WHERE id_pelanggan=?");
-                ps.setString(1, selectedId);
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Terhapus", "Data pelanggan berhasil dihapus.", "success");
-                    loadDataDariDatabase(); bersihkanForm();
+                Connection kon = DatabaseConnection.getKoneksiTransaksi();
+                try (PreparedStatement ps = kon.prepareStatement("DELETE FROM data_pelanggan WHERE id_pelanggan=?")) {
+                    ps.setString(1, selectedId);
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Terhapus", "Data pelanggan berhasil dihapus.", "success");
+                        loadDataDariDatabase(); bersihkanForm();
+                    }
                 }
             } catch (Exception e) {
-                tampilkanNotif("Gagal Hapus", "Data ini tidak bisa dihapus karena masih terkait dengan transaksi servis.", "error");
+                UIHelper.tampilkanNotif(this, "Gagal Hapus", "Data ini tidak bisa dihapus karena masih terkait dengan transaksi servis.", "error");
             }
         }
     }
@@ -431,27 +362,5 @@ public class FormDataPelanggan extends Form {
         String k = txtSearch.getText();
         if (k.trim().isEmpty()) rowSorter.setRowFilter(null);
         else rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + k));
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); 
-            setOpaque(true);
-        }
-        @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
-            return this;
-        }
     }
 }

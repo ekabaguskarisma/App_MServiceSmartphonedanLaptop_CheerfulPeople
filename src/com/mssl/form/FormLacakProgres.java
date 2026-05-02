@@ -5,21 +5,20 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import com.mssl.main.FormManager;
+import com.mssl.utils.UIHelper;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
-import java.awt.Window;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JProgressBar;
-import javax.swing.SwingUtilities;
 import net.miginfocom.swing.MigLayout;
 
 public class FormLacakProgres extends Form {
@@ -51,10 +50,7 @@ public class FormLacakProgres extends Form {
 
     private JPanel createHeaderPanel() {
         JPanel p = new JPanel(new MigLayout("insets 15, fill", "[][grow, right]", "[]"));
-        
-        p.putClientProperty(FlatClientProperties.STYLE, ""
-                + "background:rgb(255,255,255);"
-                + "arc:20"); 
+        p.putClientProperty(FlatClientProperties.STYLE, "background:rgb(255,255,255); arc:20"); 
 
         JLabel lblTitle = new JLabel("Live Tracking Servis Perangkat");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
@@ -67,9 +63,7 @@ public class FormLacakProgres extends Form {
         try {
             lblTitle.setIcon(new FlatSVGIcon("com/mssl/icon/device.svg", 28, 28));
             lblHeaderNota.setIcon(new FlatSVGIcon("com/mssl/icon/users.svg", 24, 24));
-        } catch (Exception e) {
-            System.err.println("Icon Header tidak ditemukan");
-        }
+        } catch (Exception e) {}
 
         p.add(lblTitle);
         p.add(lblHeaderNota);
@@ -88,7 +82,6 @@ public class FormLacakProgres extends Form {
 
     private JPanel createStatusCard() {
         JPanel card = new JPanel(new MigLayout("wrap, fill, insets 20", "[fill, grow]", "[]5[]"));
-        
         card.putClientProperty(FlatClientProperties.STYLE, "background:$Panel.background; arc:15");
 
         JLabel lblStatusHeader = new JLabel("STATUS SAAT INI");
@@ -126,14 +119,12 @@ public class FormLacakProgres extends Form {
         txtLogArea.setFont(new Font("Fira Code", Font.PLAIN, 14)); 
         txtLogArea.setForeground(new Color(70, 70, 80));
         txtLogArea.setBackground(CARD_BG_COLOR);
-        
         txtLogArea.setMargin(new java.awt.Insets(10, 15, 10, 15));
         txtLogArea.setLineWrap(true);
         txtLogArea.setWrapStyleWord(true);
 
         JScrollPane scrollPane = new JScrollPane(txtLogArea);
         scrollPane.setBorder(BorderFactory.createEmptyBorder()); 
-        
         scrollPane.putClientProperty(FlatClientProperties.STYLE, "background:$Panel.background; arc:15"); 
 
         p.add(lblLogTitle, "gaptop 10, gapy n 5");
@@ -158,44 +149,12 @@ public class FormLacakProgres extends Form {
 
         btnRefresh.setBackground(ACCENT_ORANGE);
         btnRefresh.setForeground(Color.WHITE);
-        btnRefresh.putClientProperty(FlatClientProperties.STYLE, ""
-                + "arc:999;" 
-                + "borderWidth:0;" 
-                + "focusWidth:0;" 
-                + "margin:8,30,8,30"); 
+        btnRefresh.putClientProperty(FlatClientProperties.STYLE, "arc:999; borderWidth:0; focusWidth:0; margin:8,30,8,30"); 
 
         btnRefresh.addActionListener(e -> loadDataFromDatabase());
 
         p.add(btnRefresh, "height 40!");
         return p;
-    }
-
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
 
     private void loadDataFromDatabase() {
@@ -217,16 +176,14 @@ public class FormLacakProgres extends Form {
 
             @Override
             protected Void doInBackground() throws Exception {
-                // UPDATE SQL: Tambahkan JOIN ke tabel pengambilan untuk mengecek tgl_ambil
                 String sql = "SELECT s.status AS status_global, p.status_servis, p.persentase, p.keterangan, pg.tgl_ambil " +
                              "FROM data_servis_lengkap s " +
                              "LEFT JOIN tb_progres_servis p ON p.id_nota = CONCAT('N', LPAD(s.id_servis, 5, '0')) " +
                              "LEFT JOIN data_pengambilan pg ON s.id_servis = s.id_servis " +
                              "WHERE CONCAT('N', LPAD(s.id_servis, 5, '0')) = ?";
                 
-                java.sql.Connection conn = DatabaseConnection.getKoneksi();
-                
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (Connection conn = DatabaseConnection.getKoneksi();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, finalIdNota);
                     try (ResultSet res = ps.executeQuery()) {
                         if (res.next()) {
@@ -234,7 +191,7 @@ public class FormLacakProgres extends Form {
                             String statServis = res.getString("status_servis");
                             int persen = res.getInt("persentase");
                             String ket = res.getString("keterangan");
-                            String tglAmbil = res.getString("tgl_ambil"); // Cek apakah sudah diambil
+                            String tglAmbil = res.getString("tgl_ambil"); 
                             
                             if (statServis != null) {
                                 dbStatus = statServis;
@@ -248,23 +205,17 @@ public class FormLacakProgres extends Form {
                                 dbLog = "Perangkat telah diterima dan sedang menunggu giliran pengecekan awal oleh teknisi kami.";
                             }
                             
-                            // LOGIKA BARU: Pemisahan "Siap Diambil" dan "Telah Diambil"
                             if ("Selesai".equalsIgnoreCase(statusGlobal)) {
                                 if (tglAmbil != null && !tglAmbil.isEmpty()) {
-                                    dbStatus = "Telah Diambil";
-                                    dbProgres = 100;
+                                    dbStatus = "Telah Diambil"; dbProgres = 100;
                                     if (ket == null || ket.isEmpty()) dbLog = "Perangkat telah diambil oleh pelanggan. Terima kasih telah mempercayakan servis di Cheerful People!";
                                 } else {
-                                    dbStatus = "Selesai (Siap Diambil)";
-                                    dbProgres = 100;
+                                    dbStatus = "Selesai (Siap Diambil)"; dbProgres = 100;
                                     if (ket == null || ket.isEmpty()) dbLog = "Perangkat telah selesai diperbaiki dan siap untuk diambil. Silakan menuju kasir.";
                                 }
                             } else if ("Batal".equalsIgnoreCase(statusGlobal)) {
-                                dbStatus = "Servis Dibatalkan";
-                                dbProgres = 0;
-                                dbLog = "Proses servis dibatalkan.";
+                                dbStatus = "Servis Dibatalkan"; dbProgres = 0; dbLog = "Proses servis dibatalkan.";
                             }
-                            
                             isFound = true;
                         }
                     }
@@ -279,7 +230,6 @@ public class FormLacakProgres extends Form {
             protected void done() {
                 try {
                     get(); 
-                    
                     lblStatusTeks.setText(dbStatus);
                     progressBar.setValue(dbProgres);
                     txtLogArea.setText(dbLog);
@@ -304,8 +254,8 @@ public class FormLacakProgres extends Form {
 
                 } catch (Exception e) {
                     lblStatusTeks.setText("Gagal Memuat Data");
-                    txtLogArea.setText("Pastikan koneksi database XAMPP berjalan lancar.");
-                    tampilkanNotif("Error Database", "Gagal memuat status: " + errorMsg, "error");
+                    txtLogArea.setText("Pastikan koneksi database berjalan lancar.");
+                    UIHelper.tampilkanNotif(FormLacakProgres.this, "Error Database", "Gagal memuat status: " + errorMsg, "error");
                 }
             }
         };

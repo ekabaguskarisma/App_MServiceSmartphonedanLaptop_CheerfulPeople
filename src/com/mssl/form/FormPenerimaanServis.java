@@ -5,6 +5,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.FormManager;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.print.*;
@@ -14,10 +15,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
-import java.sql.CallableStatement;
 
 public class FormPenerimaanServis extends Form {
 
@@ -105,7 +104,8 @@ public class FormPenerimaanServis extends Form {
         pBtn.add(btnSimpan, "grow"); pBtn.add(btnBersih, "grow");
         panelForm.add(pBtn, "gapy 15");
 
-        JScrollPane scrollKiri = createCustomScroll(panelForm);
+        // MEMANGGIL SCROLL DARI UIHELPER
+        JScrollPane scrollKiri = UIHelper.createCustomScroll(panelForm);
 
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
         panelData.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#ffffff");
@@ -144,10 +144,13 @@ public class FormPenerimaanServis extends Form {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tableAntrean = new JTable(modelAntrean);
-        styleTable(tableAntrean);
+        
+        // MEMANGGIL STYLING TABEL DARI UIHELPER
+        UIHelper.styleTable(tableAntrean, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         tableAntrean.getColumnModel().getColumn(0).setMaxWidth(90);
         
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        // MEMANGGIL TEXT WRAPPER DARI UIHELPER
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         tableAntrean.getColumnModel().getColumn(1).setCellRenderer(textWrapper);
         tableAntrean.getColumnModel().getColumn(2).setCellRenderer(textWrapper);
         
@@ -191,31 +194,6 @@ public class FormPenerimaanServis extends Form {
         return tf;
     }
 
-    private JScrollPane createCustomScroll(JPanel p) {
-        JScrollPane s = new JScrollPane(p);
-        s.setBorder(null);
-        s.setOpaque(false);
-        s.getViewport().setOpaque(false);
-        s.getVerticalScrollBar().setUnitIncrement(15);
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
-        return s;
-    }
-
-    private void styleTable(JTable tb) {
-        tb.setBackground(CARD_BG_COLOR);
-        tb.setRowHeight(60); 
-        tb.setShowGrid(false);
-        tb.setShowHorizontalLines(true);
-        tb.setGridColor(new Color(230, 230, 235));
-        tb.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 85%); selectionForeground:#000000; selectionArc:10");
-        JTableHeader h = tb.getTableHeader();
-        h.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        h.setOpaque(false);
-        h.setBackground(TABLE_HEADER_BG); 
-        h.setForeground(SIDEBAR_MAIN_COLOR);
-        ((DefaultTableCellRenderer)h.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-    }
-
     private void showModalPelanggan() {
         JDialog d = new JDialog(FormManager.getJFrame(), "Pilih Pelanggan", true);
         d.setSize(650, 500); d.setLocationRelativeTo(this);
@@ -231,7 +209,8 @@ public class FormPenerimaanServis extends Form {
         DefaultTableModel m = new DefaultTableModel(new String[]{"No.", "Nama Pelanggan", "No. WhatsApp", "ID_Asli"}, 0) { 
             @Override public boolean isCellEditable(int r, int cl) { return false; } 
         };
-        JTable t = new JTable(m); styleTable(t);
+        JTable t = new JTable(m); 
+        UIHelper.styleTable(t, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         t.setRowHeight(45);
         t.getColumnModel().getColumn(0).setMaxWidth(80);
         
@@ -241,16 +220,12 @@ public class FormPenerimaanServis extends Form {
         
         TableRowSorter<DefaultTableModel> s = new TableRowSorter<>(m); t.setRowSorter(s);
         
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            ResultSet rs = kon.createStatement().executeQuery("SELECT id_pelanggan, nama_pelanggan, no_whatsapp FROM data_pelanggan ORDER BY id_pelanggan DESC");
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             ResultSet rs = kon.createStatement().executeQuery("SELECT id_pelanggan, nama_pelanggan, no_whatsapp FROM data_pelanggan ORDER BY id_pelanggan DESC")) {
             int no = 1;
             while(rs.next()){ 
                 m.addRow(new Object[]{
-                    no++, 
-                    rs.getString("nama_pelanggan"), 
-                    rs.getString("no_whatsapp"),
-                    rs.getInt("id_pelanggan")
+                    no++, rs.getString("nama_pelanggan"), rs.getString("no_whatsapp"), rs.getInt("id_pelanggan")
                 }); 
             }
         } catch (Exception e) {}
@@ -273,7 +248,7 @@ public class FormPenerimaanServis extends Form {
                 txtPelanggan.setText(m.getValueAt(mRow, 1).toString());
                 d.dispose();
             } else {
-                tampilkanNotif("Info", "Pilih salah satu pelanggan dari tabel terlebih dahulu.", "warning");
+                UIHelper.tampilkanNotif(d, "Info", "Pilih salah satu pelanggan dari tabel terlebih dahulu.", "warning");
             }
         };
         
@@ -293,58 +268,58 @@ public class FormPenerimaanServis extends Form {
 
     private void prosesSimpanTerpadu() {
         if (idPelangganTerpilih == -1 || txtMerek.getText().isEmpty() || txtTipeModel.getText().isEmpty() || txtKeluhan.getText().isEmpty()) {
-            tampilkanNotif("Peringatan", "Lengkapi Pemilik Unit, Detail Perangkat, dan Keluhan!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Lengkapi Pemilik Unit, Detail Perangkat, dan Keluhan!", "warning");
             return;
         }
         
         String namaPelanggan = txtPelanggan.getText().trim();
         String perangkatLengkap = txtMerek.getText().trim() + " " + txtTipeModel.getText().trim();
         
-        Connection kon = null;
         try {
-            kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksiTransaksi();
             kon.setAutoCommit(false);
             
-            // Simpan ke data_perangkat, MENGGUNAKAN STORED PROCEDURE (SP_TambahAntrean)
-            CallableStatement cs = kon.prepareCall("{call SP_TambahAntrean(?, ?, ?, ?, ?, ?, ?, ?)}");
-            cs.setInt(1, idPelangganTerpilih);
-            cs.setString(2, cbJenisPerangkat.getSelectedItem().toString());
-            cs.setString(3, txtMerek.getText().trim());
-            cs.setString(4, txtTipeModel.getText().trim());
-            cs.setString(5, txtKetPerangkat.getText().trim());
-            cs.setString(6, txtKelengkapan.getText().trim());
-            cs.setString(7, txtKeluhan.getText().trim());
+            try {
+                CallableStatement cs = kon.prepareCall("{call SP_TambahAntrean(?, ?, ?, ?, ?, ?, ?, ?)}");
+                cs.setInt(1, idPelangganTerpilih);
+                cs.setString(2, cbJenisPerangkat.getSelectedItem().toString());
+                cs.setString(3, txtMerek.getText().trim());
+                cs.setString(4, txtTipeModel.getText().trim());
+                cs.setString(5, txtKetPerangkat.getText().trim());
+                cs.setString(6, txtKelengkapan.getText().trim());
+                cs.setString(7, txtKeluhan.getText().trim());
 
-            // Parameter ke-8 adalah OUT parameter untuk mengambil ID Servis yang dihasilkan DB
-            cs.registerOutParameter(8, java.sql.Types.INTEGER);
-            cs.execute();
+                cs.registerOutParameter(8, java.sql.Types.INTEGER);
+                cs.execute();
 
-            // Ambil ID Servis hasil generate Stored Procedure
-            int idServis = cs.getInt(8);
-            String noNotaBaru = "N" + String.format("%05d", idServis);
-            
-            // Ambil Nomor HP Pelanggan
-            String noHp = "";
-            PreparedStatement psHp = kon.prepareStatement("SELECT no_whatsapp FROM data_pelanggan WHERE id_pelanggan = ?");
-            psHp.setInt(1, idPelangganTerpilih);
-            ResultSet rsHp = psHp.executeQuery();
-            if(rsHp.next()) noHp = rsHp.getString("no_whatsapp");
-            
-            kon.commit();
-            
-            // Memanggil Pop-Up Custom dengan Opsi Cetak
-            tampilkanTiketPendaftaran(noNotaBaru, noHp, namaPelanggan, perangkatLengkap);
-            
-            loadAntreanHariIni(); 
-            resetForm();
+                int idServis = cs.getInt(8);
+                String noNotaBaru = "N" + String.format("%05d", idServis);
+                
+                String noHp = "";
+                PreparedStatement psHp = kon.prepareStatement("SELECT no_whatsapp FROM data_pelanggan WHERE id_pelanggan = ?");
+                psHp.setInt(1, idPelangganTerpilih);
+                ResultSet rsHp = psHp.executeQuery();
+                if(rsHp.next()) noHp = rsHp.getString("no_whatsapp");
+                
+                kon.commit();
+                
+                tampilkanTiketPendaftaran(noNotaBaru, noHp, namaPelanggan, perangkatLengkap);
+                
+                loadAntreanHariIni(); 
+                resetForm();
+                
+            } catch (Exception ex) {
+                kon.rollback();
+                throw ex; 
+            } finally {
+                kon.close(); 
+            }
             
         } catch (Exception e) {
-            try { if(kon != null) kon.rollback(); } catch (Exception ex) {}
-            tampilkanNotif("Gagal Simpan", "Terjadi kesalahan database: " + e.getMessage(), "error");
+            UIHelper.tampilkanNotif(this, "Gagal Simpan", "Terjadi kesalahan database: " + e.getMessage(), "error");
         }
     }
     
-    // UPDATE: FITUR CETAK POP-UP NOTA TIKET DENGAN LINK PORTAL
     private void tampilkanTiketPendaftaran(String noNota, String noHp, String nama, String perangkat) {
         JPanel pnl = new JPanel(new MigLayout("wrap, fillx, insets 20 30 20 30", "[center]", "[]10[]5[]15[fill]15[]"));
         pnl.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#ffffff");
@@ -361,7 +336,6 @@ public class FormPenerimaanServis extends Form {
         lblDesc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblDesc.setForeground(TEXT_MUTED);
         
-        // --- PANEL TIKET (STRUK) ---
         JPanel pnlTicket = new JPanel(new MigLayout("wrap 2, fillx, insets 15 25 15 25", "[][grow, right]", "[]10[]12[]12[]12[]12[]"));
         pnlTicket.putClientProperty(FlatClientProperties.STYLE, "arc:15; background:#f5f6fa; border:1,solid,#e2e8f0");
 
@@ -388,11 +362,10 @@ public class FormPenerimaanServis extends Form {
 
         pnlTicket.add(new JSeparator(), "span 2, growx, gapy 5");
 
-        // --- TAMBAHAN LINK PORTAL PELANGGAN ---
         pnlTicket.add(new JLabel("LINK PELACAKAN") {{setFont(fLabel); setForeground(cLabel);}}, "span 2, center, gapbottom 2");
         pnlTicket.add(new JLabel("cheerfulpeopleproject.rf.gd") {{
             setFont(new Font("Segoe UI", Font.BOLD, 13)); 
-            setForeground(new Color(41, 128, 185)); // Warna Biru Link Profesional
+            setForeground(new Color(41, 128, 185));
         }}, "span 2, center");
 
         pnl.add(lblIcon);
@@ -415,75 +388,53 @@ public class FormPenerimaanServis extends Form {
             if (window != null) window.dispose();
         });
 
-        javax.swing.JOptionPane.showOptionDialog(
-            this, 
-            pnl, 
-            "Tiket Pendaftaran Servis", 
-            javax.swing.JOptionPane.DEFAULT_OPTION, 
-            javax.swing.JOptionPane.PLAIN_MESSAGE, 
-            null, 
-            new Object[]{btnCetak, btnTutup},
-            btnTutup
+        JOptionPane.showOptionDialog(
+            this, pnl, "Tiket Pendaftaran Servis", 
+            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, 
+            null, new Object[]{btnCetak, btnTutup}, btnTutup
         );
     }
     
-    // LOGIKA MENCETAK PANEL TIKET KE PDF
     private void cetakTiketKePDF(JPanel panelToPrint, String noNota) {
         PrinterJob job = PrinterJob.getPrinterJob();
         job.setJobName("Tiket_Pendaftaran_" + noNota);
 
-        job.setPrintable(new Printable() {
-            @Override
-            public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
-                if (pageIndex > 0) {
-                    return Printable.NO_SUCH_PAGE;
-                }
+        job.setPrintable((graphics, pageFormat, pageIndex) -> {
+            if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
 
-                Graphics2D g2d = (Graphics2D) graphics;
-                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                
-                double pageWidth = pageFormat.getImageableWidth();
-                double panelWidth = panelToPrint.getWidth();
-                double scale = 1.0;
+            Graphics2D g2d = (Graphics2D) graphics;
+            g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+            
+            double pageWidth = pageFormat.getImageableWidth();
+            double panelWidth = panelToPrint.getWidth();
+            double scale = (panelWidth > pageWidth) ? (pageWidth / panelWidth) : 1.0;
 
-                if (panelWidth > pageWidth) {
-                    scale = pageWidth / panelWidth;
-                }
+            g2d.translate(10, 20);
+            g2d.scale(scale * 0.95, scale * 0.95);
+            
+            RepaintManager currentManager = RepaintManager.currentManager(panelToPrint);
+            currentManager.setDoubleBufferingEnabled(false);
+            panelToPrint.print(g2d);
+            currentManager.setDoubleBufferingEnabled(true);
 
-                g2d.translate(10, 20);
-                g2d.scale(scale * 0.95, scale * 0.95);
-                
-                RepaintManager currentManager = RepaintManager.currentManager(panelToPrint);
-                currentManager.setDoubleBufferingEnabled(false);
-                panelToPrint.print(g2d);
-                currentManager.setDoubleBufferingEnabled(true);
-
-                return Printable.PAGE_EXISTS;
-            }
+            return Printable.PAGE_EXISTS;
         });
         
-        boolean isPrintAccepted = job.printDialog();
-        if (isPrintAccepted) {
+        if (job.printDialog()) {
             try {
                 job.print();
-                tampilkanNotif("Sukses", "Tiket berhasil dikirim untuk dicetak!", "success");
+                UIHelper.tampilkanNotif(this, "Sukses", "Tiket berhasil dikirim untuk dicetak!", "success");
             } catch (PrinterException ex) {
-                tampilkanNotif("Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error");
+                UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error");
             }
         }
     }
 
     private void loadAntreanHariIni() {
         modelAntrean.setRowCount(0);
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status " +
-                         "FROM data_servis_lengkap s " +
-                         "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
-                         "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
-                         "WHERE DATE(s.tgl_masuk) = CURDATE() AND s.status NOT IN ('Diambil', 'Batal') " +
-                         "ORDER BY s.id_servis DESC";
-            ResultSet rs = kon.createStatement().executeQuery(sql);
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             ResultSet rs = kon.createStatement().executeQuery("SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat WHERE DATE(s.tgl_masuk) = CURDATE() AND s.status NOT IN ('Diambil', 'Batal') ORDER BY s.id_servis DESC")) {
+            
             while(rs.next()){ 
                 modelAntrean.addRow(new Object[]{ 
                     String.format("N%05d", rs.getInt("id_servis")), 
@@ -505,54 +456,5 @@ public class FormPenerimaanServis extends Form {
         String k = txtSearchAntrean.getText();
         if (k.trim().isEmpty()) sorterAntrean.setRowFilter(null);
         else sorterAntrean.setRowFilter(RowFilter.regexFilter("(?i)" + k));
-    }
-
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); 
-        tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); 
-        p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        
-        b.addActionListener(e -> { 
-            Window w = SwingUtilities.getWindowAncestor(b); 
-            if(w != null) w.dispose(); 
-        });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true); setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); setOpaque(true);
-        }
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) { setBackground(table.getSelectionBackground()); setForeground(table.getSelectionForeground()); }
-            else { setBackground(table.getBackground()); setForeground(table.getForeground()); }
-            return this;
-        }
     }
 }

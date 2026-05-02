@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper; // IMPORT SAKTI KITA MASUK DI SINI
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.Connection;
@@ -16,7 +17,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
 
@@ -91,9 +91,7 @@ public class FormDataSparepart extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
-        // --- TAMBAHAN FITUR ENTER: Jika tekan Enter di Harga Jual, otomatis Simpan ---
         txtJual.addActionListener(e -> btnSimpan.doClick());
-        // ----------------------------------------------------------------------------
         
         btnHapus = new JButton("Hapus");
         btnHapus.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -119,7 +117,8 @@ public class FormDataSparepart extends Form {
         panelBtn.add(btnBersih, "grow");
         panelForm.add(panelBtn, "gapy 10");
 
-        JScrollPane scrollKiri = createCustomScroll(panelForm);
+        // MEMANGGIL FUNGSI SCROLL DARI UIHELPER
+        JScrollPane scrollKiri = UIHelper.createCustomScroll(panelForm);
         
         // 2. TABEL DATA
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
@@ -159,20 +158,8 @@ public class FormDataSparepart extends Form {
         };
         tableSparepart = new JTable(tableModel);
         
-        tableSparepart.setBackground(CARD_BG_COLOR);
-        tableSparepart.setForeground(new Color(60, 60, 60));
-        tableSparepart.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tableSparepart.setRowHeight(60); 
-        tableSparepart.setShowGrid(false);
-        tableSparepart.setShowHorizontalLines(true);
-        tableSparepart.setGridColor(new Color(230, 230, 235));
-        tableSparepart.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 80%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader tableHeader = tableSparepart.getTableHeader();
-        tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tableHeader.setOpaque(false);
-        tableHeader.setBackground(TABLE_HEADER_BG); 
-        tableHeader.setForeground(SIDEBAR_MAIN_COLOR);
+        // MEMANGGIL STYLING TABEL DARI UIHELPER
+        UIHelper.styleTable(tableSparepart, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
         tableSparepart.getColumnModel().getColumn(0).setPreferredWidth(50); // No.
         tableSparepart.getColumnModel().getColumn(1).setPreferredWidth(200); // Nama
@@ -199,11 +186,13 @@ public class FormDataSparepart extends Form {
         tableSparepart.getColumnModel().getColumn(4).setCellRenderer(topLeftRenderer);
         tableSparepart.getColumnModel().getColumn(5).setCellRenderer(topLeftRenderer);
 
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        // MEMANGGIL TEXT WRAPPER DARI UIHELPER
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         tableSparepart.getColumnModel().getColumn(1).setCellRenderer(textWrapper); 
 
-        ((DefaultTableCellRenderer) tableSparepart.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-        
+        StockRenderer stockRenderer = new StockRenderer();
+        tableSparepart.getColumnModel().getColumn(4).setCellRenderer(stockRenderer);
+
         rowSorter = new TableRowSorter<>(tableModel);
         tableSparepart.setRowSorter(rowSorter);
 
@@ -224,15 +213,14 @@ public class FormDataSparepart extends Form {
         
         btnRefresh.addActionListener(e -> { 
             txtSearch.setText(""); 
-            bersihkanForm(); // Bersihkan form input saat direfresh
+            bersihkanForm(); 
             loadDataDariDatabase(); 
         });
 
-        // --- TAMBAHAN FITUR ENTER PENCARIAN ---
         txtSearch.addActionListener(e -> {
             if (tableSparepart.getRowCount() > 0) {
-                tableSparepart.setRowSelectionInterval(0, 0); // Pilih otomatis
-                pilihData(); // Isi form
+                tableSparepart.setRowSelectionInterval(0, 0); 
+                pilihData(); 
             }
         });
         
@@ -253,15 +241,12 @@ public class FormDataSparepart extends Form {
         int row = tableSparepart.getSelectedRow();
         if (row >= 0) {
             int modelRow = tableSparepart.convertRowIndexToModel(row);
-            
-            // Ambil ID dari Kolom Hidden Index 6
             selectedId = tableModel.getValueAt(modelRow, 6).toString(); 
             
             txtNama.setText(tableModel.getValueAt(modelRow, 1).toString());
             cbKategori.setSelectedItem(tableModel.getValueAt(modelRow, 2).toString());
             txtStok.setText(tableModel.getValueAt(modelRow, 3).toString());
             
-            // Ambil Harga Mentah dari Kolom Hidden Index 7 & 8
             txtModal.setText(tableModel.getValueAt(modelRow, 7).toString());
             txtJual.setText(tableModel.getValueAt(modelRow, 8).toString());
 
@@ -275,107 +260,14 @@ public class FormDataSparepart extends Form {
         }
     }
 
-    private JScrollPane createCustomScroll(JPanel p) {
-        JScrollPane s = new JScrollPane(p);
-        s.setBorder(null); s.setOpaque(false); s.getViewport().setOpaque(false);
-        s.getVerticalScrollBar().setUnitIncrement(15);
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
-        return s;
-    }
-    
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); 
-        tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); 
-        p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        
-        b.addActionListener(e -> { 
-            Window w = SwingUtilities.getWindowAncestor(b); 
-            if(w != null) w.dispose(); 
-        });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-    
-    // FUNGSI KONFIRMASI (YES / NO)
-    private boolean tampilkanConfirm(String title, String message) {
-        JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        internalPanel.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#e74c3c"); // Merah untuk Hapus
-
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/error.svg", 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        JLabel lbIcon = new JLabel(icon);
-        
-        JPanel textPanel = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]"));
-        textPanel.setOpaque(false); 
-        
-        JLabel lbTitle = new JLabel(title);
-        lbTitle.putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff");
-        JLabel lbMessage = new JLabel(message);
-        lbMessage.putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)");
-        
-        textPanel.add(lbTitle);
-        textPanel.add(lbMessage);
-        
-        internalPanel.add(lbIcon, "top, gapy 2");
-        internalPanel.add(textPanel);
-        
-        JButton btnBatal = new JButton("Batal");
-        btnBatal.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnBatal.putClientProperty(FlatClientProperties.STYLE, "background:rgba(255,255,255,0.2); foreground:#ffffff; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
-
-        JButton btnYa = new JButton("Ya, Lanjutkan");
-        btnYa.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnYa.putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:#e74c3c; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
-        
-        final boolean[] result = {false};
-
-        btnYa.addActionListener(e -> {
-            result[0] = true;
-            Window window = SwingUtilities.getWindowAncestor(btnYa);
-            if (window != null) window.dispose();
-        });
-
-        btnBatal.addActionListener(e -> {
-            result[0] = false;
-            Window window = SwingUtilities.getWindowAncestor(btnBatal);
-            if (window != null) window.dispose();
-        });
-
-        JOptionPane.showOptionDialog(this, internalPanel, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{btnBatal, btnYa}, btnBatal);
-
-        return result[0];
-    }
-
     private void loadDataDariDatabase() {
         tableModel.setRowCount(0); 
         NumberFormat formatRupiah = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
         int no = 1;
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT * FROM data_sparepart ORDER BY id_sparepart DESC";
-            PreparedStatement ps = kon.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
+        
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             PreparedStatement ps = kon.prepareStatement("SELECT * FROM data_sparepart ORDER BY id_sparepart DESC");
+             ResultSet rs = ps.executeQuery()) { // TRY-WITH-RESOURCES
 
             while (rs.next()) {
                 double modal = rs.getDouble("harga_modal");
@@ -409,7 +301,7 @@ public class FormDataSparepart extends Form {
         String jualStr = txtJual.getText().trim();
 
         if (nama.isEmpty() || stokStr.isEmpty() || modalStr.isEmpty() || jualStr.isEmpty()) {
-            tampilkanNotif("Peringatan", "Semua kolom input wajib diisi!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Semua kolom input wajib diisi!", "warning");
             return;
         }
 
@@ -418,50 +310,44 @@ public class FormDataSparepart extends Form {
             double modal = Double.parseDouble(modalStr);
             double jual = Double.parseDouble(jualStr);
             
-            Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksiTransaksi();
             
             if (selectedId.isEmpty()) {
-                // === MODE INPUT BARU DENGAN LOGIKA CEK DUPLIKAT (UPSERT) ===
                 String sqlCek = "SELECT id_sparepart, stok FROM data_sparepart WHERE nama_sparepart = ? AND kategori = ?";
-                PreparedStatement psCek = kon.prepareStatement(sqlCek);
-                psCek.setString(1, nama);
-                psCek.setString(2, kategori);
-                ResultSet rs = psCek.executeQuery();
+                try (PreparedStatement psCek = kon.prepareStatement(sqlCek)) {
+                    psCek.setString(1, nama);
+                    psCek.setString(2, kategori);
+                    try (ResultSet rs = psCek.executeQuery()) {
+                        if (rs.next()) {
+                            int idExisting = rs.getInt("id_sparepart");
+                            int stokLama = rs.getInt("stok");
+                            int totalStokSekarang = stokLama + stok;
 
-                if (rs.next()) {
-                    // Jika sudah ada, tambahkan stoknya
-                    int idExisting = rs.getInt("id_sparepart");
-                    int stokLama = rs.getInt("stok");
-                    int totalStokSekarang = stokLama + stok;
-
-                    String sqlUpdate = "UPDATE data_sparepart SET stok = ?, harga_modal = ?, harga_jual = ? WHERE id_sparepart = ?";
-                    PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate);
-                    psUpdate.setInt(1, totalStokSekarang);
-                    psUpdate.setDouble(2, modal);
-                    psUpdate.setDouble(3, jual);
-                    psUpdate.setInt(4, idExisting);
-                    
-                    if (psUpdate.executeUpdate() > 0) {
-                        tampilkanNotif("Berhasil", "Barang sudah ada. Stok ditambahkan menjadi: " + totalStokSekarang, "success");
-                    }
-                } else {
-                    // Jika belum ada, insert baru
-                    String sqlInsert = "INSERT INTO data_sparepart (nama_sparepart, kategori, stok, harga_modal, harga_jual) VALUES (?, ?, ?, ?, ?)";
-                    PreparedStatement psInsert = kon.prepareStatement(sqlInsert);
-                    psInsert.setString(1, nama); psInsert.setString(2, kategori); psInsert.setInt(3, stok); psInsert.setDouble(4, modal); psInsert.setDouble(5, jual);
-                    
-                    if (psInsert.executeUpdate() > 0) {
-                        tampilkanNotif("Berhasil", "Data sparepart baru berhasil ditambahkan!", "success");
+                            String sqlUpdate = "UPDATE data_sparepart SET stok = ?, harga_modal = ?, harga_jual = ? WHERE id_sparepart = ?";
+                            try (PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate)) {
+                                psUpdate.setInt(1, totalStokSekarang); psUpdate.setDouble(2, modal); psUpdate.setDouble(3, jual); psUpdate.setInt(4, idExisting);
+                                if (psUpdate.executeUpdate() > 0) {
+                                    UIHelper.tampilkanNotif(this, "Berhasil", "Barang sudah ada. Stok ditambahkan menjadi: " + totalStokSekarang, "success");
+                                }
+                            }
+                        } else {
+                            String sqlInsert = "INSERT INTO data_sparepart (nama_sparepart, kategori, stok, harga_modal, harga_jual) VALUES (?, ?, ?, ?, ?)";
+                            try (PreparedStatement psInsert = kon.prepareStatement(sqlInsert)) {
+                                psInsert.setString(1, nama); psInsert.setString(2, kategori); psInsert.setInt(3, stok); psInsert.setDouble(4, modal); psInsert.setDouble(5, jual);
+                                if (psInsert.executeUpdate() > 0) {
+                                    UIHelper.tampilkanNotif(this, "Berhasil", "Data sparepart baru berhasil ditambahkan!", "success");
+                                }
+                            }
+                        }
                     }
                 }
             } else {
-                // === MODE EDIT (Update Data Spesifik) ===
                 String sql = "UPDATE data_sparepart SET nama_sparepart=?, kategori=?, stok=?, harga_modal=?, harga_jual=? WHERE id_sparepart=?";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, nama); ps.setString(2, kategori); ps.setInt(3, stok); ps.setDouble(4, modal); ps.setDouble(5, jual); ps.setString(6, selectedId);
-                
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Diperbarui", "Data sparepart berhasil diupdate!", "success");
+                try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                    ps.setString(1, nama); ps.setString(2, kategori); ps.setInt(3, stok); ps.setDouble(4, modal); ps.setDouble(5, jual); ps.setString(6, selectedId);
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Diperbarui", "Data sparepart berhasil diupdate!", "success");
+                    }
                 }
             }
             
@@ -469,29 +355,28 @@ public class FormDataSparepart extends Form {
             bersihkanForm(); 
             
         } catch (NumberFormatException e) {
-            tampilkanNotif("Error", "Input stok atau harga harus berupa angka!", "error");
+            UIHelper.tampilkanNotif(this, "Error", "Input stok atau harga harus berupa angka!", "error");
         } catch (Exception e) {
-            tampilkanNotif("Error Sistem", "Terjadi kesalahan database: " + e.getMessage(), "error");
+            UIHelper.tampilkanNotif(this, "Error Sistem", "Terjadi kesalahan database: " + e.getMessage(), "error");
         }
     }
 
     private void hapusData() {
         if (selectedId.isEmpty()) return;
 
-        if (tampilkanConfirm("Konfirmasi Hapus", "Yakin ingin menghapus sparepart ini dari inventaris?")) {
+        if (UIHelper.tampilkanConfirm(this, "Konfirmasi Hapus", "Yakin ingin menghapus sparepart ini dari inventaris?")) {
             try {
-                Connection kon = DatabaseConnection.getKoneksi();
-                String sql = "DELETE FROM data_sparepart WHERE id_sparepart=?";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, selectedId);
-                
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Terhapus", "Data sparepart berhasil dihapus!", "success");
-                    loadDataDariDatabase();
-                    bersihkanForm();
+                Connection kon = DatabaseConnection.getKoneksiTransaksi();
+                try (PreparedStatement ps = kon.prepareStatement("DELETE FROM data_sparepart WHERE id_sparepart=?")) {
+                    ps.setString(1, selectedId);
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Terhapus", "Data sparepart berhasil dihapus!", "success");
+                        loadDataDariDatabase();
+                        bersihkanForm();
+                    }
                 }
             } catch (Exception e) {
-                tampilkanNotif("Gagal", "Data tidak bisa dihapus karena masih terkait di keranjang.", "error");
+                UIHelper.tampilkanNotif(this, "Gagal", "Data tidak bisa dihapus karena masih terkait di keranjang.", "error");
             }
         }
     }
@@ -515,17 +400,32 @@ public class FormDataSparepart extends Form {
         else rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
     }
 
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true); setWrapStyleWord(true); setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); setOpaque(true);
+    // KHUSUS FORM SPAREPART, CLASS INI DIPERTAHANKAN KARENA ADA WARNA CUSTOM JIKA STOK <= 5
+    class StockRenderer extends DefaultTableCellRenderer {
+        public StockRenderer() {
+            setVerticalAlignment(SwingConstants.TOP);
+            setHorizontalAlignment(SwingConstants.LEFT);
+            setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            setFont(new Font("Segoe UI", Font.BOLD, 14)); 
         }
+
         @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) { setBackground(table.getSelectionBackground()); setForeground(table.getSelectionForeground()); }
-            else { setBackground(table.getBackground()); setForeground(table.getForeground()); }
-            return this;
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            try {
+                int stok = Integer.parseInt(value.toString().replaceAll("[^0-9]", ""));
+                
+                if (!isSelected) {
+                    if (stok == 0) {
+                        c.setForeground(new Color(180, 180, 180)); 
+                    } else if (stok <= 5) {
+                        c.setForeground(ERROR_RED); 
+                    } else {
+                        c.setForeground(SIDEBAR_MAIN_COLOR); 
+                    }
+                }
+            } catch(Exception e){}
+            return c;
         }
     }
 }

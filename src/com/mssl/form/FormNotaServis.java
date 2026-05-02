@@ -1,13 +1,13 @@
 package com.mssl.form;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import com.formdev.flatlaf.extras.FlatSVGIcon;
-import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
 import com.mssl.main.FormManager;
+import com.mssl.koneksi.DatabaseConnection;
+import com.mssl.utils.UIHelper;
 import java.awt.*;
-import java.awt.event.*;
 import java.awt.print.*;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.NumberFormat;
@@ -17,7 +17,6 @@ import net.miginfocom.swing.MigLayout;
 
 public class FormNotaServis extends Form {
 
-    // Komponen UI
     private JPanel pnlCetak; 
     private JLabel lblHeaderNota, lblPesanError;
     private JLabel lblTglMasuk, lblTglSelesai, lblTglAmbil; 
@@ -25,16 +24,14 @@ public class FormNotaServis extends Form {
     private JLabel lblBiaya, lblStatusBayar, lblGaransi;
     
     private JLabel lblTitleJasa, lblValJasa;
-    // PERBAIKAN: Menambahkan referensi global untuk judul total bayar agar bisa diubah dinamis
     private JLabel lblTitleTotalBayar; 
     
-    private JPanel pnlDaftarKomponen; // PANEL DINAMIS UNTUK SPAREPART
+    private JPanel pnlDaftarKomponen; 
     private JPanel cardFinansial; 
     
     private JTextArea txtKelengkapan, txtKeluhan, txtDiagnosa, txtTindakan;
     private String idNotaUntukDicetak = "";
 
-    // Palet Warna
     private final Color APP_BG_COLOR = new Color(245, 245, 248); 
     private final Color CARD_BG_COLOR = Color.WHITE;
     private final Color SIDEBAR_MAIN_COLOR = new Color(40, 45, 60); 
@@ -140,10 +137,8 @@ public class FormNotaServis extends Form {
         cardFinansial.add(new JSeparator(), "span 2, growx, gapy 2 5");
         
         lblTitleJasa = createTitleLabel("Biaya Jasa Teknisi & Perbaikan"); lblValJasa = createDataLabel("Rp 0");
-        
         cardFinansial.add(lblTitleJasa); cardFinansial.add(lblValJasa);
         
-        // WADAH PANEL DINAMIS UNTUK SPAREPART
         pnlDaftarKomponen = new JPanel(new MigLayout("wrap 2, fillx, insets 0", "[fill, grow][right]", "[]2[]"));
         pnlDaftarKomponen.setOpaque(false);
         cardFinansial.add(pnlDaftarKomponen, "span 2, growx, gapy 5 5");
@@ -162,12 +157,10 @@ public class FormNotaServis extends Form {
         lblBiaya = new JLabel("Rp 0"); lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 28)); lblBiaya.setForeground(FINISH_GREEN); 
         cardFinansial.add(new JSeparator(), "span 2, growx, gaptop 10");
         
-        // PERBAIKAN: Menginisialisasi referensi global untuk judul total bayar
         lblTitleTotalBayar = new JLabel("TOTAL PEMBAYARAN / ESTIMASI");
         lblTitleTotalBayar.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
         lblTitleTotalBayar.setForeground(SIDEBAR_MAIN_COLOR);
         cardFinansial.add(lblTitleTotalBayar, "gaptop 5"); 
-        
         cardFinansial.add(lblBiaya, "right, gaptop 5");
         
         pnlCetak.add(cardFinansial, "growx, gaptop 10");
@@ -177,13 +170,8 @@ public class FormNotaServis extends Form {
         lblFooterNB.setForeground(TEXT_MUTED);
         pnlCetak.add(lblFooterNB, "center, gaptop 10");
 
-        JScrollPane scrollCetak = new JScrollPane(pnlCetak);
-        scrollCetak.setBorder(null);
-        scrollCetak.setOpaque(false);
-        scrollCetak.getViewport().setOpaque(false);
+        JScrollPane scrollCetak = UIHelper.createCustomScroll(pnlCetak);
         scrollCetak.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollCetak.getVerticalScrollBar().setUnitIncrement(15);
-        scrollCetak.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
 
         add(scrollCetak, "grow, wmin 0");
         add(createFooterPanel(), "left, gaptop 15"); 
@@ -206,12 +194,6 @@ public class FormNotaServis extends Form {
         btnCetak.setBackground(SIDEBAR_MAIN_COLOR);
         btnCetak.setForeground(Color.WHITE);
         btnCetak.putClientProperty(FlatClientProperties.STYLE, "arc:999; borderWidth:0; focusWidth:0; margin:8,30,8,30"); 
-
-        try {
-            FlatSVGIcon refreshIcon = new FlatSVGIcon("com/mssl/icon/recive.svg", 18, 18);
-            refreshIcon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> Color.WHITE));
-            btnRefresh.setIcon(refreshIcon);
-        } catch (Exception e) {}
 
         btnRefresh.addActionListener(e -> loadDataNota());
         btnCetak.addActionListener(e -> cetakKePDF());
@@ -245,33 +227,10 @@ public class FormNotaServis extends Form {
         return ta;
     }
 
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-
     private void cetakKePDF() {
-        if (idNotaUntukDicetak.isEmpty()) { tampilkanNotif("Peringatan", "Data nota belum termuat sepenuhnya!", "warning"); return; }
+        if (idNotaUntukDicetak.isEmpty()) { 
+            UIHelper.tampilkanNotif(this, "Peringatan", "Data nota belum termuat sepenuhnya!", "warning"); return; 
+        }
         PrinterJob job = PrinterJob.getPrinterJob();
         job.setJobName("Nota Servis - " + idNotaUntukDicetak);
 
@@ -288,8 +247,12 @@ public class FormNotaServis extends Form {
         });
         
         if (job.printDialog()) {
-            try { job.print(); tampilkanNotif("Sukses", "Nota berhasil dicetak/disimpan!", "success");
-            } catch (PrinterException ex) { tampilkanNotif("Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error"); }
+            try { 
+                job.print(); 
+                UIHelper.tampilkanNotif(this, "Sukses", "Nota berhasil dicetak/disimpan!", "success");
+            } catch (PrinterException ex) { 
+                UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error"); 
+            }
         }
     }
 
@@ -316,8 +279,8 @@ public class FormNotaServis extends Form {
             protected Void doInBackground() throws Exception {
                 String sql = "SELECT * FROM vw_detail_nota WHERE id_servis = ?";
                 
-                java.sql.Connection conn = com.mssl.koneksi.DatabaseConnection.getKoneksi();
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (Connection conn = DatabaseConnection.getKoneksi();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, idServisAngka);
                     try (ResultSet res = ps.executeQuery()) {
                         if (res.next()) {
@@ -325,7 +288,6 @@ public class FormNotaServis extends Form {
                             dbTelepon = res.getString("no_whatsapp"); dbPerangkat = res.getString("merek") + " " + res.getString("tipe_model");
                             dbKelengkapan = res.getString("kelengkapan"); dbKeluhan = res.getString("keluhan_awal");
                             dbDiagnosa = res.getString("hasil_diagnosa"); 
-                            
                             dbJasa = res.getDouble("biaya_jasa");
                             
                             String tindakanDb = res.getString("tindakan_perbaikan");
@@ -348,31 +310,28 @@ public class FormNotaServis extends Form {
                             isFound = true;
                         }
                     }
-                } catch (Exception e) { errorMsg = e.getMessage(); throw e;  }
-                
-                // MENGAMBIL LIST SPAREPART SECARA DINAMIS
-                if (isFound) {
-                    String sqlParts = "SELECT sp.kategori, sp.nama_sparepart, det.qty, det.subtotal " +
-                                      "FROM detail_pengambilan_sparepart det " +
-                                      "JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
-                                      "JOIN data_pengambilan pg ON det.id_pengambilan = pg.id_pengambilan " +
-                                      "WHERE pg.id_servis = ?";
-                    try (PreparedStatement psParts = conn.prepareStatement(sqlParts)) {
-                        psParts.setInt(1, idServisAngka);
-                        try (ResultSet rsParts = psParts.executeQuery()) {
-                            while(rsParts.next()) {
-                                String namaLengkapPart = rsParts.getString("kategori") + " " + rsParts.getString("nama_sparepart");
-                                
-                                listParts.add(new String[]{
-                                    namaLengkapPart, 
-                                    String.valueOf(rsParts.getInt("qty")),
-                                    String.valueOf(rsParts.getDouble("subtotal"))
-                                });
+                    
+                    if (isFound) {
+                        String sqlParts = "SELECT sp.kategori, sp.nama_sparepart, det.qty, det.subtotal " +
+                                          "FROM detail_pengambilan_sparepart det " +
+                                          "JOIN data_sparepart sp ON det.id_sparepart = sp.id_sparepart " +
+                                          "JOIN data_pengambilan pg ON det.id_pengambilan = pg.id_pengambilan " +
+                                          "WHERE pg.id_servis = ?";
+                        try (PreparedStatement psParts = conn.prepareStatement(sqlParts)) {
+                            psParts.setInt(1, idServisAngka);
+                            try (ResultSet rsParts = psParts.executeQuery()) {
+                                while(rsParts.next()) {
+                                    String namaLengkapPart = rsParts.getString("kategori") + " " + rsParts.getString("nama_sparepart");
+                                    listParts.add(new String[]{
+                                        namaLengkapPart, 
+                                        String.valueOf(rsParts.getInt("qty")),
+                                        String.valueOf(rsParts.getDouble("subtotal"))
+                                    });
+                                }
                             }
                         }
                     }
-                }
-                
+                } catch (Exception e) { errorMsg = e.getMessage(); throw e;  }
                 return null;
             }
 
@@ -391,7 +350,6 @@ public class FormNotaServis extends Form {
                         NumberFormat formatRp = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
                         lblValJasa.setText(formatRp.format(dbJasa).replace(",00", ""));
                         
-                        // MENGISI PANEL KOMPONEN SECARA DINAMIS
                         pnlDaftarKomponen.removeAll();
                         pnlDaftarKomponen.add(createTitleLabel("Penggantian Komponen:"), "span 2");
                         
@@ -413,23 +371,20 @@ public class FormNotaServis extends Form {
                                 lblHg.setFont(new Font("Segoe UI", Font.BOLD, 12));
                                 lblHg.setForeground(SIDEBAR_MAIN_COLOR);
 
-                                pnlDaftarKomponen.add(lblNm);
-                                pnlDaftarKomponen.add(lblHg);
+                                pnlDaftarKomponen.add(lblNm); pnlDaftarKomponen.add(lblHg);
                             }
                         }
-                        pnlDaftarKomponen.revalidate();
-                        pnlDaftarKomponen.repaint();
+                        pnlDaftarKomponen.revalidate(); pnlDaftarKomponen.repaint();
                         
                         lblTglSelesai.setText((dbTglSelesai == null || dbTglSelesai.trim().isEmpty()) ? "Belum Selesai" : dbTglSelesai);
                         lblTglAmbil.setText((dbTglAmbil == null || dbTglAmbil.trim().isEmpty()) ? "Belum Diambil" : dbTglAmbil);
                         
-                        // PERBAIKAN: Menentukan Label Total Pembayaran Berdasarkan Status
                         if (dbStatusBayar == null || dbStatusBayar.isEmpty()) {
                             lblStatusBayar.setText("Belum Lunas"); lblStatusBayar.setForeground(ERROR_RED);
-                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI"); // Masih estimasi
+                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI");
                         } else if (dbStatusBayar.contains("Lunas") || dbStatusBayar.contains("Diambil") || dbStatusBayar.contains("Tunai") || dbStatusBayar.contains("Transfer")) {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(FINISH_GREEN);
-                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN"); // Bukan estimasi lagi
+                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN");
                         } else {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(ERROR_RED);
                             lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI");

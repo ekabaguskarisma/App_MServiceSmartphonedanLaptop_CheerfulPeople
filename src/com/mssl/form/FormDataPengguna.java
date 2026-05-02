@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.mssl.koneksi.DatabaseConnection;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper; // IMPORT SAKTI KITA MASUK DI SINI
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.Connection;
@@ -14,7 +15,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.miginfocom.swing.MigLayout;
 
@@ -79,9 +79,7 @@ public class FormDataPengguna extends Form {
         btnSimpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSimpan.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", ACCENT_ORANGE.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; borderWidth:0; focusWidth:0");
         
-        // --- TAMBAHAN FITUR ENTER: TEKAN ENTER DI PASSWORD -> SIMPAN ---
         txtPassword.addActionListener(e -> btnSimpan.doClick());
-        // ---------------------------------------------------------------
         
         btnHapus = new JButton("Hapus");
         btnHapus.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -111,7 +109,8 @@ public class FormDataPengguna extends Form {
         panelBtn.add(btnBersih, "grow");
         panelForm.add(panelBtn, "gapy 15");
 
-        JScrollPane scrollKiri = createCustomScroll(panelForm);
+        // MENGGUNAKAN SCROLL DARI UIHELPER
+        JScrollPane scrollKiri = UIHelper.createCustomScroll(panelForm);
 
         JPanel panelData = new JPanel(new MigLayout("wrap, fill, insets 25", "[fill]", "[][fill,grow]"));
         panelData.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#ffffff");
@@ -151,11 +150,10 @@ public class FormDataPengguna extends Form {
             txtSearch.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, new FlatSVGIcon("com/mssl/icon/search.svg", 16, 16));
         } catch (Exception e) {}
 
-        // --- TAMBAHAN FITUR ENTER: PENCARIAN PENGGUNA ---
         txtSearch.addActionListener(e -> {
             if (table.getRowCount() > 0) {
-                table.setRowSelectionInterval(0, 0); // Sorot hasil pencarian
-                pilihData(); // Langsung isi ke form
+                table.setRowSelectionInterval(0, 0); 
+                pilihData(); 
             }
         });
         
@@ -176,20 +174,8 @@ public class FormDataPengguna extends Form {
         };
         table = new JTable(tableModel);
         
-        table.setBackground(CARD_BG_COLOR);
-        table.setForeground(new Color(60, 60, 60));
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setRowHeight(60); 
-        table.setShowGrid(false);
-        table.setShowHorizontalLines(true);
-        table.setGridColor(new Color(230, 230, 235));
-        table.putClientProperty(FlatClientProperties.STYLE, "selectionBackground:tint(@accentColor, 80%); selectionForeground:#000000; selectionArc:10");
-
-        JTableHeader tableHeader = table.getTableHeader();
-        tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tableHeader.setOpaque(false);
-        tableHeader.setBackground(TABLE_HEADER_BG); 
-        tableHeader.setForeground(SIDEBAR_MAIN_COLOR);
+        // MENGGUNAKAN STYLE DARI UIHELPER
+        UIHelper.styleTable(table, TABLE_HEADER_BG, SIDEBAR_MAIN_COLOR);
         
         table.getColumnModel().getColumn(0).setPreferredWidth(60);  // No.
         table.getColumnModel().getColumn(1).setPreferredWidth(250); // Nama Lengkap
@@ -205,15 +191,14 @@ public class FormDataPengguna extends Form {
         topLeftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
         topLeftRenderer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
         
-        WrapTextRenderer textWrapper = new WrapTextRenderer();
+        // MENGGUNAKAN TEXT WRAPPER DARI UIHELPER
+        UIHelper.WrapTextRenderer textWrapper = new UIHelper.WrapTextRenderer();
         
         table.getColumnModel().getColumn(0).setCellRenderer(topLeftRenderer);
         table.getColumnModel().getColumn(1).setCellRenderer(textWrapper); 
         table.getColumnModel().getColumn(2).setCellRenderer(textWrapper); 
         table.getColumnModel().getColumn(3).setCellRenderer(topLeftRenderer);
 
-        ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
-        
         rowSorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(rowSorter);
 
@@ -274,103 +259,14 @@ public class FormDataPengguna extends Form {
         }
     }
 
-    private JScrollPane createCustomScroll(JPanel p) {
-        JScrollPane s = new JScrollPane(p);
-        s.setBorder(null);
-        s.setOpaque(false);
-        s.getViewport().setOpaque(false);
-        s.getVerticalScrollBar().setUnitIncrement(15);
-        s.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, "width:7; trackArc:999; thumbArc:999;");
-        return s;
-    }
-    
-    // =========================================================
-    // FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
-    private void tampilkanNotif(String title, String message, String type) {
-        final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
-        String iconName = type.equals("success") ? "success.svg" : "error.svg";
-        
-        JPanel p = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:" + bgColor); 
-        
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/" + iconName, 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        
-        JPanel tp = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]")); tp.setOpaque(false); 
-        tp.add(new JLabel(title) {{ setFont(new Font("Segoe UI", Font.BOLD, 18)); setForeground(Color.WHITE); }});
-        tp.add(new JLabel(message) {{ setFont(new Font("Segoe UI", Font.PLAIN, 13)); setForeground(new Color(240,240,240)); }});
-        
-        p.add(new JLabel(icon), "top, gapy 2"); p.add(tp);
-        
-        JButton b = new JButton("Tutup") {{ 
-            setCursor(new Cursor(Cursor.HAND_CURSOR)); 
-            putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:" + bgColor + "; font:bold; arc:10; borderWidth:0; margin:5,15,5,15; focusWidth:0"); 
-        }};
-        b.addActionListener(e -> { Window w = SwingUtilities.getWindowAncestor(b); if(w!=null) w.dispose(); });
-
-        JOptionPane.showOptionDialog(this, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
-    }
-    
-    private boolean tampilkanConfirm(String title, String message) {
-        JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
-        internalPanel.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#e74c3c"); 
-
-        FlatSVGIcon icon = new FlatSVGIcon("com/mssl/icon/error.svg", 45, 45);
-        icon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE)); 
-        JLabel lbIcon = new JLabel(icon);
-        
-        JPanel textPanel = new JPanel(new MigLayout("wrap, insets 0", "[fill]", "[]5[]"));
-        textPanel.setOpaque(false); 
-        
-        JLabel lbTitle = new JLabel(title);
-        lbTitle.putClientProperty(FlatClientProperties.STYLE, "font:bold +5; foreground:#ffffff");
-        JLabel lbMessage = new JLabel(message);
-        lbMessage.putClientProperty(FlatClientProperties.STYLE, "font:13; foreground:rgb(240,240,240)");
-        
-        textPanel.add(lbTitle);
-        textPanel.add(lbMessage);
-        
-        internalPanel.add(lbIcon, "top, gapy 2");
-        internalPanel.add(textPanel);
-        
-        JButton btnBatal = new JButton("Batal");
-        btnBatal.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnBatal.putClientProperty(FlatClientProperties.STYLE, "background:rgba(255,255,255,0.2); foreground:#ffffff; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
-
-        JButton btnYa = new JButton("Ya, Lanjutkan");
-        btnYa.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnYa.putClientProperty(FlatClientProperties.STYLE, "background:#ffffff; foreground:#e74c3c; font:bold; arc:10; borderWidth:0; focusWidth:0; margin:5,15,5,15");
-        
-        final boolean[] result = {false};
-
-        btnYa.addActionListener(e -> {
-            result[0] = true;
-            Window window = SwingUtilities.getWindowAncestor(btnYa);
-            if (window != null) window.dispose();
-        });
-
-        btnBatal.addActionListener(e -> {
-            result[0] = false;
-            Window window = SwingUtilities.getWindowAncestor(btnBatal);
-            if (window != null) window.dispose();
-        });
-
-        JOptionPane.showOptionDialog(this, internalPanel, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{btnBatal, btnYa}, btnBatal);
-
-        return result[0];
-    }
-
     private void loadDataDariDatabase() {
         tableModel.setRowCount(0); 
         int total = 0;
         int nomorUrut = 1;
         
-        try {
-            Connection kon = DatabaseConnection.getKoneksi();
-            String sql = "SELECT * FROM data_pengguna WHERE role != 'Pelanggan' ORDER BY id_user DESC";
-            PreparedStatement ps = kon.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
+        try (Connection kon = DatabaseConnection.getKoneksi();
+             PreparedStatement ps = kon.prepareStatement("SELECT * FROM data_pengguna WHERE role != 'Pelanggan' ORDER BY id_user DESC");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 tableModel.addRow(new Object[]{
@@ -395,78 +291,67 @@ public class FormDataPengguna extends Form {
         String role = cbRole.getSelectedItem().toString();
 
         if (nama.isEmpty() || username.isEmpty()) {
-            tampilkanNotif("Peringatan", "Nama dan Username wajib diisi!", "warning");
+            UIHelper.tampilkanNotif(this, "Peringatan", "Nama dan Username wajib diisi!", "warning");
             return;
         }
 
         try {
-            Connection kon = DatabaseConnection.getKoneksi();
+            Connection kon = DatabaseConnection.getKoneksiTransaksi();
             
             if (selectedId.isEmpty()) {
                 if(password.isEmpty()){
-                    tampilkanNotif("Peringatan", "Password wajib diisi untuk akun baru!", "warning");
+                    UIHelper.tampilkanNotif(this, "Peringatan", "Password wajib diisi untuk akun baru!", "warning");
                     return;
                 }
                 
                 String sql = "INSERT INTO data_pengguna (nama_lengkap, username, password, role) VALUES (?, ?, ?, ?)";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, nama);
-                ps.setString(2, username);
-                ps.setString(3, password);
-                ps.setString(4, role);
-                
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Sukses", "Akun baru berhasil ditambahkan!", "success");
+                try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                    ps.setString(1, nama); ps.setString(2, username); ps.setString(3, password); ps.setString(4, role);
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Sukses", "Akun baru berhasil ditambahkan!", "success");
+                    }
                 }
             } else {
                 String sql;
-                PreparedStatement ps;
                 if(password.isEmpty()){
                     sql = "UPDATE data_pengguna SET nama_lengkap=?, username=?, role=? WHERE id_user=?";
-                    ps = kon.prepareStatement(sql);
-                    ps.setString(1, nama);
-                    ps.setString(2, username);
-                    ps.setString(3, role);
-                    ps.setString(4, selectedId);
+                    try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                        ps.setString(1, nama); ps.setString(2, username); ps.setString(3, role); ps.setString(4, selectedId);
+                        if (ps.executeUpdate() > 0) UIHelper.tampilkanNotif(this, "Sukses", "Data akun berhasil diperbarui!", "success");
+                    }
                 } else {
                     sql = "UPDATE data_pengguna SET nama_lengkap=?, username=?, password=?, role=? WHERE id_user=?";
-                    ps = kon.prepareStatement(sql);
-                    ps.setString(1, nama);
-                    ps.setString(2, username);
-                    ps.setString(3, password);
-                    ps.setString(4, role);
-                    ps.setString(5, selectedId);
-                }
-
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Sukses", "Data akun berhasil diperbarui!", "success");
+                    try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                        ps.setString(1, nama); ps.setString(2, username); ps.setString(3, password); ps.setString(4, role); ps.setString(5, selectedId);
+                        if (ps.executeUpdate() > 0) UIHelper.tampilkanNotif(this, "Sukses", "Data akun berhasil diperbarui!", "success");
+                    }
                 }
             }
             loadDataDariDatabase();
             bersihkanForm(); 
             
         } catch (Exception e) {
-            tampilkanNotif("Error Database", "Gagal memproses data (Mungkin Username sudah digunakan): " + e.getMessage(), "error");
+            UIHelper.tampilkanNotif(this, "Error Database", "Gagal memproses data (Mungkin Username sudah digunakan): " + e.getMessage(), "error");
         }
     }
 
     private void hapusData() {
         if (selectedId.isEmpty()) return;
 
-        if(tampilkanConfirm("Konfirmasi Hapus", "Yakin ingin menghapus akun ini dari sistem?")) {
+        if(UIHelper.tampilkanConfirm(this, "Konfirmasi Hapus", "Yakin ingin menghapus akun ini dari sistem?")) {
             try {
-                Connection kon = DatabaseConnection.getKoneksi();
+                Connection kon = DatabaseConnection.getKoneksiTransaksi();
                 String sql = "DELETE FROM data_pengguna WHERE id_user=?";
-                PreparedStatement ps = kon.prepareStatement(sql);
-                ps.setString(1, selectedId);
-
-                if (ps.executeUpdate() > 0) {
-                    tampilkanNotif("Sukses", "Akun berhasil dihapus!", "success");
-                    loadDataDariDatabase();
-                    bersihkanForm();
+                try (PreparedStatement ps = kon.prepareStatement(sql)) {
+                    ps.setString(1, selectedId);
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Sukses", "Akun berhasil dihapus!", "success");
+                        loadDataDariDatabase();
+                        bersihkanForm();
+                    }
                 }
             } catch (Exception e) {
-                tampilkanNotif("Error Database", "Gagal menghapus data: " + e.getMessage(), "error");
+                UIHelper.tampilkanNotif(this, "Error Database", "Gagal menghapus data: " + e.getMessage(), "error");
             }
         }
     }
@@ -497,29 +382,6 @@ public class FormDataPengguna extends Form {
             rowSorter.setRowFilter(null);
         } else {
             rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
-        }
-    }
-
-    class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
-        public WrapTextRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            setMargin(new java.awt.Insets(10, 10, 10, 10)); 
-            setOpaque(true);
-        }
-
-        @Override
-        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
-            return this;
         }
     }
 }
