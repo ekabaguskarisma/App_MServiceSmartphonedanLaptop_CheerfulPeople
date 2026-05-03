@@ -10,9 +10,7 @@ import net.miginfocom.swing.MigLayout;
 
 public class UIHelper {
     
-    // =========================================================
-    // 1. FUNGSI NOTIFIKASI TIKET CUSTOM (PREMIUM STYLE)
-    // =========================================================
+    // 1. FUNGSI NOTIFIKASI TIKET
     public static void tampilkanNotif(Component parent, String title, String message, String type) {
         final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
         String iconName = type.equals("success") ? "success.svg" : "error.svg";
@@ -40,9 +38,7 @@ public class UIHelper {
         JOptionPane.showOptionDialog(parent, p, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{b}, b);
     }
     
-    // =========================================================
-    // 2. FUNGSI KONFIRMASI (YES / NO)
-    // =========================================================
+    // 2. FUNGSI KONFIRMASI
     public static boolean tampilkanConfirm(Component parent, String title, String message) {
         JPanel internalPanel = new JPanel(new MigLayout("insets 20, gapx 20", "[][grow]", "[]"));
         internalPanel.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#e74c3c"); 
@@ -92,9 +88,7 @@ public class UIHelper {
         return result[0];
     }
     
-    // =========================================================
     // 3. FUNGSI RENDER CUSTOM SCROLLBAR
-    // =========================================================
     public static JScrollPane createCustomScroll(JPanel p) {
         JScrollPane s = new JScrollPane(p);
         s.setBorder(null);
@@ -105,9 +99,7 @@ public class UIHelper {
         return s;
     }
     
-    // =========================================================
     // 4. FUNGSI STYLING TABEL GLOBAL
-    // =========================================================
     public static void styleTable(JTable tb, Color headerBg, Color headerFg) {
         tb.setBackground(Color.WHITE);
         tb.setRowHeight(60); 
@@ -124,9 +116,7 @@ public class UIHelper {
         ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
     }
     
-    // =========================================================
     // 5. CLASS RENDERER TEXT WRAP (AUTO ENTER DI TABEL)
-    // =========================================================
     public static class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
         public WrapTextRenderer() {
             setLineWrap(true); 
@@ -150,11 +140,10 @@ public class UIHelper {
         }
     }
     
-    // 6. FUNGSI EKSPOR TABEL KE EXCEL (AESTHETIC & RAPI OTOMATIS)
+    // 6. FUNGSI EKSPOR TABEL KE EXCEL
     public static void exportToCSV(Component parent, JTable table, String defaultFileName) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Simpan Laporan sebagai Excel (.xls)");
-        // Sekarang kita simpan sebagai .xls, bukan .csv
         fileChooser.setSelectedFile(new java.io.File(defaultFileName + ".xls"));
         
         javax.swing.filechooser.FileNameExtensionFilter filter = new javax.swing.filechooser.FileNameExtensionFilter("Excel Document (*.xls)", "xls");
@@ -171,22 +160,18 @@ public class UIHelper {
 
             try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.FileWriter(fileToSave))) {
                 
-                // KITA SUNTIKKAN HTML & CSS AGAR EXCEL OTOMATIS TAMPIL KEREN
                 bw.write("<html><head><meta charset=\"UTF-8\">");
                 bw.write("<style>");
                 bw.write("table { border-collapse: collapse; width: 100%; font-family: 'Segoe UI', Arial, sans-serif; }");
-                // Warna header menyesuaikan tema aplikasi (Gelap elegan)
                 bw.write("th { background-color: #282D3C; color: #FFFFFF; font-weight: bold; padding: 10px; border: 1px solid #B0B0B0; text-align: left; }");
-                // white-space: nowrap mencegah teks turun ke bawah dan memaksa kolom Excel melebar otomatis
                 bw.write("td { padding: 8px; border: 1px solid #D0D0D0; white-space: nowrap; vertical-align: top; }");
-                // Efek selang-seling warna baris (Zebra striping)
                 bw.write("tr:nth-child(even) { background-color: #F8F9FC; }");
                 bw.write("</style></head><body>");
                 
                 bw.write("<h2>" + defaultFileName.replace("_", " ") + "</h2>");
                 bw.write("<table>");
 
-                // 1. TULIS HEADER (Judul Kolom)
+                // 1. TULIS HEADER
                 bw.write("<tr>");
                 for (int i = 0; i < table.getColumnCount(); i++) {
                     if (table.getColumnModel().getColumn(i).getWidth() > 0) {
@@ -219,6 +204,18 @@ public class UIHelper {
             } catch (Exception ex) {
                 tampilkanNotif(parent, "Gagal Ekspor", "Terjadi kesalahan: " + ex.getMessage(), "error");
             }
+        }
+    }
+    // 7. FUNGSI PEMBUKA TAUTAN WEB (BROWSER)
+    public static void bukaLinkWeb(Component parent, String url) {
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new java.net.URI(url));
+            } else {
+                tampilkanNotif(parent, "Gagal", "Sistem operasi Anda tidak mendukung fitur buka tautan otomatis.", "error");
+            }
+        } catch (Exception ex) {
+            tampilkanNotif(parent, "Error Buka Tautan", "Gagal membuka tautan: " + ex.getMessage(), "error");
         }
     }
 }

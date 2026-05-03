@@ -2,6 +2,10 @@ package com.mssl.form;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.mssl.main.Form;
+import com.mssl.utils.UIHelper; // Import sakti kita
+import java.awt.Cursor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.miginfocom.swing.MigLayout;
@@ -33,21 +37,23 @@ public class FormCS extends Form {
         JLabel lbWa = new JLabel("Contact Person (WhatsApp)");
         lbWa.putClientProperty(FlatClientProperties.STYLE, "font:bold +4; foreground:rgb(37,211,102)"); // Warna Hijau WA
 
+        // --- MASUKKAN TAUTAN WA DI SINI (0 diganti 62) ---
         JPanel panelWa = new JPanel(new MigLayout("wrap 3, insets 0, gapx 40, gapy 15", "[][][]", "[]"));
         panelWa.setOpaque(false);
-        panelWa.add(createContactCard("Gusht", "0822-3454-8092"));
-        panelWa.add(createContactCard("Panjie", "0856-4639-4081"));
-        panelWa.add(createContactCard("Bryan", "0821-4062-4202"));
+        panelWa.add(createContactCard("Gusht", "0822-3454-8092", "https://wa.me/6282234548092"));
+        panelWa.add(createContactCard("Panjie", "0856-4639-4081", "https://wa.me/6285646394081"));
+        panelWa.add(createContactCard("Bryan", "0821-4062-4202", "https://wa.me/6282140624202"));
 
         // SECTION INSTAGRAM
         JLabel lbIg = new JLabel("Instagram");
         lbIg.putClientProperty(FlatClientProperties.STYLE, "font:bold +4; foreground:rgb(225,48,108)"); // Warna Pink IG
 
+        // --- MASUKKAN TAUTAN INSTAGRAM DI SINI ---
         JPanel panelIg = new JPanel(new MigLayout("wrap 3, insets 0, gapx 40", "[][][]", "[]"));
         panelIg.setOpaque(false);
-        panelIg.add(createIgCard("@ex.gusht"));
-        panelIg.add(createIgCard("@jie_"));
-        panelIg.add(createIgCard("@bynadsp"));
+        panelIg.add(createIgCard("@ex.gusht", "https://www.instagram.com/ex.gusht01/"));
+        panelIg.add(createIgCard("@jie_", "https://www.instagram.com/panjiprataama_/"));
+        panelIg.add(createIgCard("@bynadsp", "https://www.instagram.com/bynadsp/"));
 
         // FOOTER DEVELOPER
         JLabel lbDev = new JLabel("Developed By Cheerful People");
@@ -65,9 +71,11 @@ public class FormCS extends Form {
         add(cardUtama);
     }
     
-    private JPanel createContactCard(String nama, String nomor) {
+    // --- METHOD HELPER YANG SUDAH DIUPGRADE ---
+    
+    private JPanel createContactCard(String nama, String nomor, String url) {
         JPanel p = new JPanel(new MigLayout("wrap, insets 10 20 10 20", "[center]", "[][]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:15; background:rgb(245,248,255)"); // Background biru super muda
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:15; background:rgb(245,248,255)"); 
 
         JLabel lbNama = new JLabel(nama);
         lbNama.putClientProperty(FlatClientProperties.STYLE, "font:bold 16; foreground:@accentColor");
@@ -77,17 +85,37 @@ public class FormCS extends Form {
 
         p.add(lbNama);
         p.add(lbNomor);
+        
+        // Menjadikan panel bisa diklik dan merubah kursor jadi tangan
+        p.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        p.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                UIHelper.bukaLinkWeb(FormCS.this, url); // Panggil fungsi buka link
+            }
+        });
+
         return p;
     }
     
-    private JPanel createIgCard(String username) {
+    private JPanel createIgCard(String username, String url) {
         JPanel p = new JPanel(new MigLayout("insets 8 20 8 20", "[center]", "[]"));
-        p.putClientProperty(FlatClientProperties.STYLE, "arc:15; background:rgb(255,245,248)"); // Background pink super muda
+        p.putClientProperty(FlatClientProperties.STYLE, "arc:15; background:rgb(255,245,248)"); 
 
         JLabel lbUsername = new JLabel(username);
         lbUsername.putClientProperty(FlatClientProperties.STYLE, "font:bold 15; foreground:rgb(200,60,100)");
 
         p.add(lbUsername);
+        
+        // Menjadikan panel bisa diklik dan merubah kursor jadi tangan
+        p.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        p.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                UIHelper.bukaLinkWeb(FormCS.this, url); // Panggil fungsi buka link
+            }
+        });
+
         return p;
     }
 }

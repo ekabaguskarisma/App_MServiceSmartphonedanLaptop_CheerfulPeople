@@ -118,7 +118,7 @@ public class FormPenerimaanServis extends Form {
         JLabel lblTitleData = new JLabel("Antrean Masuk");
         lblTitleData.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitleData.setForeground(SIDEBAR_MAIN_COLOR);
-        JLabel lblSubTitleData = new JLabel("(Data Terdaftar Hari Ini)");
+        JLabel lblSubTitleData = new JLabel("(Data Terdaftar)");
         lblSubTitleData.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblSubTitleData.setForeground(TEXT_MUTED);
         pnlTitleData.add(lblTitleData, "gapbottom -2");
@@ -433,8 +433,15 @@ public class FormPenerimaanServis extends Form {
     private void loadAntreanHariIni() {
         modelAntrean.setRowCount(0);
         try (Connection kon = DatabaseConnection.getKoneksi();
-             ResultSet rs = kon.createStatement().executeQuery("SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status FROM data_servis_lengkap s JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat WHERE DATE(s.tgl_masuk) = CURDATE() AND s.status NOT IN ('Diambil', 'Batal') ORDER BY s.id_servis DESC")) {
-            
+             ResultSet rs = kon.createStatement().executeQuery(
+                 "SELECT s.id_servis, p.nama_pelanggan, pr.merek, pr.tipe_model, s.status " +
+                 "FROM data_servis_lengkap s " +
+                 "JOIN data_pelanggan p ON s.id_pelanggan = p.id_pelanggan " +
+                 "JOIN data_perangkat pr ON s.id_perangkat = pr.id_perangkat " +
+                 "WHERE s.status NOT IN ('Diambil', 'Batal') " +
+                 "ORDER BY s.id_servis DESC"
+             )) {
+             
             while(rs.next()){ 
                 modelAntrean.addRow(new Object[]{ 
                     String.format("N%05d", rs.getInt("id_servis")), 
@@ -443,7 +450,11 @@ public class FormPenerimaanServis extends Form {
                     rs.getString("status") 
                 }); 
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            // Tambahan: agar kalau ada error lagi, pesannya muncul di output NetBeans
+            e.printStackTrace(); 
+            javax.swing.JOptionPane.showMessageDialog(this, "Error load tabel: " + e.getMessage());
+        }
     }
 
     private void resetForm() {

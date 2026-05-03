@@ -128,7 +128,7 @@ public class FormLogin extends Form {
             String pass = String.valueOf(txtPassword.getPassword()).trim();
 
             if (user.isEmpty() || pass.isEmpty()) {
-                UIHelper.tampilkanNotif(this, "Peringatan", "Username dan Password tidak boleh kosong!", "warning");
+                UIHelper.tampilkanNotif(this, "Peringatan", "Username dan Password tidak boleh kosong!", "error");
                 return;
             }
 
