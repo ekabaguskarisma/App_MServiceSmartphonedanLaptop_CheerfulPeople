@@ -227,34 +227,93 @@ public class FormNotaServis extends Form {
         return ta;
     }
 
+    // --- BLOK KODE YANG DIPERBARUI MULAI DI SINI ---
     private void cetakKePDF() {
         if (idNotaUntukDicetak.isEmpty()) { 
-            UIHelper.tampilkanNotif(this, "Peringatan", "Data nota belum termuat sepenuhnya!", "warning"); return; 
+            UIHelper.tampilkanNotif(this, "Peringatan", "Data nota belum termuat!", "warning"); 
+            return; 
         }
-        PrinterJob job = PrinterJob.getPrinterJob();
-        job.setJobName("Nota Servis - " + idNotaUntukDicetak);
 
-        job.setPrintable((graphics, pageFormat, pageIndex) -> {
-            if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
-            Graphics2D g2d = (Graphics2D) graphics;
-            g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-            double scale = pageFormat.getImageableWidth() / pnlCetak.getWidth();
-            g2d.translate(10, 20); 
-            g2d.scale(scale * 0.95, scale * 0.95);
-            RepaintManager cm = RepaintManager.currentManager(pnlCetak);
-            cm.setDoubleBufferingEnabled(false); pnlCetak.print(g2d); cm.setDoubleBufferingEnabled(true);
-            return Printable.PAGE_EXISTS;
-        });
-        
-        if (job.printDialog()) {
-            try { 
-                job.print(); 
-                UIHelper.tampilkanNotif(this, "Sukses", "Nota berhasil dicetak/disimpan!", "success");
-            } catch (PrinterException ex) { 
-                UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error"); 
+        try {
+            // 1. TRIK DUMMY FRAME: Lepas pnlCetak dari UI sementara agar ukurannya bisa di-render utuh
+            JFrame dummyFrame = new JFrame();
+            dummyFrame.setUndecorated(true);
+            
+            JPanel wrapper = new JPanel(new BorderLayout());
+            wrapper.setBackground(Color.WHITE);
+            wrapper.add(pnlCetak, BorderLayout.CENTER);
+            dummyFrame.add(wrapper);
+            
+            // Set ukuran panjang agar semua teks (keluhan, diagnosa, part) muat sebelum dihitung
+            wrapper.setSize(595, 2000); 
+            dummyFrame.pack(); 
+
+            // Hitung tinggi aslinya, minimal setinggi kertas A4 (842)
+            int actualHeight = wrapper.getPreferredSize().height;
+            wrapper.setSize(595, Math.max(842, actualHeight));
+            dummyFrame.pack();
+
+            // 2. PROSES CETAK PDF
+            PrinterJob job = PrinterJob.getPrinterJob();
+            job.setJobName("Nota_Servis_" + idNotaUntukDicetak);
+
+            PageFormat pf = job.defaultPage();
+            Paper paper = pf.getPaper();
+            // Margin aman agar tidak error di driver Windows
+            double margin = 15;
+            paper.setImageableArea(margin, margin, paper.getWidth() - (margin * 2), paper.getHeight() - (margin * 2));
+            pf.setPaper(paper);
+            pf.setOrientation(PageFormat.PORTRAIT);
+            
+            // MANTRA WAJIB
+            pf = job.validatePage(pf);
+
+            job.setPrintable((graphics, pageFormat, pageIndex) -> {
+                if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
+                
+                Graphics2D g2d = (Graphics2D) graphics;
+                g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+                
+                // SKALA OTOMATIS: Memastikan panel muat di PDF
+                double scaleX = pageFormat.getImageableWidth() / wrapper.getWidth();
+                double scaleY = pageFormat.getImageableHeight() / wrapper.getHeight();
+                double scale = Math.min(scaleX, scaleY);
+                
+                g2d.scale(scale, scale);
+                wrapper.printAll(g2d);
+                
+                return Printable.PAGE_EXISTS;
+            }, pf);
+
+            // BUKA DIALOG PRINT WINDOWS
+            if (job.printDialog()) {
+                try {
+                    job.print();
+                    UIHelper.tampilkanNotif(this, "Sukses", "Nota berhasil dicetak/disimpan sebagai PDF!", "success");
+                } catch (PrinterException ex) {
+                    UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal: " + ex.getMessage(), "error");
+                }
             }
+
+            // 3. KEMBALIKAN TAMPILAN KE NORMAL
+            dummyFrame.dispose();
+            
+            // Rekonstruksi ulang panel ke dalam FormNotaServis agar tidak hilang dari layar
+            this.removeAll();
+            JScrollPane scrollCetak = UIHelper.createCustomScroll(pnlCetak);
+            scrollCetak.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            this.add(scrollCetak, "grow, wmin 0");
+            this.add(createFooterPanel(), "left, gaptop 15");
+            
+            this.revalidate();
+            this.repaint();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal memproses cetak PDF: \n" + ex.getMessage(), "Error Print", JOptionPane.ERROR_MESSAGE);
         }
     }
+    // --- BLOK KODE YANG DIPERBARUI SELESAI DI SINI ---
 
     private void loadDataNota() {
         String idNota = FormManager.getLoggedInUser();

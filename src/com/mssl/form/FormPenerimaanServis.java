@@ -398,38 +398,54 @@ public class FormPenerimaanServis extends Form {
     private void cetakTiketKePDF(JPanel panelToPrint, String noNota) {
         PrinterJob job = PrinterJob.getPrinterJob();
         job.setJobName("Tiket_Pendaftaran_" + noNota);
+        
+        PageFormat pf = job.defaultPage();
+        Paper paper = pf.getPaper();
+        
+        // 2. Beri margin aman minimal 20 poin
+        double margin = 20; 
+        paper.setSize(595, 842); // Ukuran A4
+        paper.setImageableArea(margin, margin, 595 - (margin * 2), 842 - (margin * 2));
+        pf.setPaper(paper);
+        pf.setOrientation(PageFormat.PORTRAIT);
+        
+        // 3. Minta Java memvalidasi ukuran kertas agar sesuai syarat printer Windows
+        pf = job.validatePage(pf);
 
         job.setPrintable((graphics, pageFormat, pageIndex) -> {
             if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
 
             Graphics2D g2d = (Graphics2D) graphics;
+            // Geser ke area cetak yang aman
             g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
             
-            double pageWidth = pageFormat.getImageableWidth();
-            double panelWidth = panelToPrint.getWidth();
-            double scale = (panelWidth > pageWidth) ? (pageWidth / panelWidth) : 1.0;
-
-            g2d.translate(10, 20);
-            g2d.scale(scale * 0.95, scale * 0.95);
+            // Hitung skala agar tiket pas di kertas
+            double panelWidth = panelToPrint.getWidth() > 0 ? panelToPrint.getWidth() : 400;
+            double scale = pageFormat.getImageableWidth() / panelWidth;
             
-            RepaintManager currentManager = RepaintManager.currentManager(panelToPrint);
-            currentManager.setDoubleBufferingEnabled(false);
-            panelToPrint.print(g2d);
-            currentManager.setDoubleBufferingEnabled(true);
+            // Jika ukuran tiket aslinya lebih kecil dari kertas, jangan diperbesar agar gambarnya tidak pecah
+            if (scale > 1.0) {
+                scale = 1.0; 
+            }
+            
+            g2d.scale(scale, scale);
+            
+            // Cetak seluruh komponen tiket
+            panelToPrint.printAll(g2d);
 
             return Printable.PAGE_EXISTS;
-        });
-        
+        }, pf);
+
+        // Munculkan dialog cetak Windows
         if (job.printDialog()) {
             try {
                 job.print();
-                UIHelper.tampilkanNotif(this, "Sukses", "Tiket berhasil dikirim untuk dicetak!", "success");
+                UIHelper.tampilkanNotif(this, "Sukses", "Tiket berhasil dicetak/disave ke PDF!", "success");
             } catch (PrinterException ex) {
-                UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal mencetak: " + ex.getMessage(), "error");
+                UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal: " + ex.getMessage(), "error");
             }
         }
     }
-
     private void loadAntreanHariIni() {
         modelAntrean.setRowCount(0);
         try (Connection kon = DatabaseConnection.getKoneksi();
@@ -451,7 +467,6 @@ public class FormPenerimaanServis extends Form {
                 }); 
             }
         } catch (Exception e) {
-            // Tambahan: agar kalau ada error lagi, pesannya muncul di output NetBeans
             e.printStackTrace(); 
             javax.swing.JOptionPane.showMessageDialog(this, "Error load tabel: " + e.getMessage());
         }
