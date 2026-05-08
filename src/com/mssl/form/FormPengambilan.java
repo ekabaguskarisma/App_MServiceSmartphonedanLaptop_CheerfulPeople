@@ -479,11 +479,11 @@ public class FormPengambilan extends Form {
                         
                         for (CartItem item : keranjang) {
                             try (PreparedStatement psDet = kon.prepareStatement("INSERT INTO detail_pengambilan_sparepart (id_pengambilan, id_sparepart, qty, subtotal) VALUES (?, ?, ?, ?)")) {
-                                psDet.setInt(1, idPengambilanBaru); psDet.setInt(2, item.idSp); psDet.setInt(3, item.qty); psDet.setDouble(4, item.subtotal);
+                                psDet.setInt(1, idPengambilanBaru); 
+                                psDet.setInt(2, item.idSp); 
+                                psDet.setInt(3, item.qty); 
+                                psDet.setDouble(4, item.subtotal);
                                 psDet.executeUpdate();
-                            }
-                            try (PreparedStatement psStok = kon.prepareStatement("UPDATE data_sparepart SET stok = stok - ? WHERE id_sparepart = ?")) {
-                                psStok.setInt(1, item.qty); psStok.setInt(2, item.idSp); psStok.executeUpdate(); 
                             }
                         }
                     }

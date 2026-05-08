@@ -36,7 +36,7 @@ public class FormNotaServis extends Form {
     private final Color CARD_BG_COLOR = Color.WHITE;
     private final Color SIDEBAR_MAIN_COLOR = new Color(40, 45, 60); 
     private final Color ACCENT_ORANGE = new Color(255, 130, 0); 
-    private final Color TEXT_MUTED = new Color(130, 130, 140);
+    private final Color TEXT_MUTED = new Color(110, 115, 130);
     private final Color ERROR_RED = new Color(231, 76, 60);
     private final Color FINISH_GREEN = new Color(39, 174, 96);
 
@@ -49,15 +49,16 @@ public class FormNotaServis extends Form {
         setLayout(new MigLayout("wrap, fill, insets 25 30 25 30", "[fill, grow]", "[grow, fill][]"));
         setBackground(APP_BG_COLOR);
         
-        pnlCetak = new JPanel(new MigLayout("wrap, fillx, insets 35 40 35 40", "[fill, grow]", "[]15[]15[]15[]"));
+        pnlCetak = new JPanel(new MigLayout("wrap, fillx, insets 40", "[fill, grow]", "[]15[]25[]25[]"));
         pnlCetak.setBackground(CARD_BG_COLOR);
         pnlCetak.putClientProperty(FlatClientProperties.STYLE, "arc:20"); 
 
-        JPanel pnlHeader = new JPanel(new MigLayout("insets 0, fillx", "[][0:0, grow, right]", "[]"));
+        // --- HEADER ---
+        JPanel pnlHeader = new JPanel(new MigLayout("insets 0, fillx", "[][grow, right]", "[]"));
         pnlHeader.setOpaque(false);
         
         JLabel lblTitle = new JLabel("Detail Nota Servis");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 28));
         lblTitle.setForeground(SIDEBAR_MAIN_COLOR);
         
         lblHeaderNota = new JLabel("Nomor Nota: Memuat...");
@@ -67,7 +68,7 @@ public class FormNotaServis extends Form {
         pnlHeader.add(lblTitle); 
         pnlHeader.add(lblHeaderNota);
         pnlCetak.add(pnlHeader, "growx");
-        pnlCetak.add(new JSeparator(), "growx, gapy 5 10");
+        pnlCetak.add(new JSeparator(), "growx, gapy 5 15");
 
         lblPesanError = new JLabel("");
         lblPesanError.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -75,14 +76,16 @@ public class FormNotaServis extends Form {
         lblPesanError.setVisible(false);
         pnlCetak.add(lblPesanError);
 
-        JPanel panelGrid = new JPanel(new MigLayout("insets 0, fillx", "[0:0, grow, fill]20[0:0, grow, fill]", "[]"));
+        // --- GRID 2 KOLOM ---
+        JPanel panelGrid = new JPanel(new MigLayout("insets 0, fillx", "[fill, 48%]4%[fill, 48%]", "[]"));
         panelGrid.setOpaque(false);
 
-        JPanel pnlKiri = new JPanel(new MigLayout("wrap, fillx, insets 0", "[130!][0:0, grow, fill]", "[]15[][][][]"));
+        // KOLOM KIRI
+        JPanel pnlKiri = new JPanel(new MigLayout("wrap, fillx, insets 0", "[140!][fill, grow]", "[]15[]12[]12[]12[]12[]"));
         pnlKiri.setOpaque(false);
         
         JLabel lblTitleKiri = new JLabel("INFO PELANGGAN & PERANGKAT");
-        lblTitleKiri.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblTitleKiri.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTitleKiri.setForeground(ACCENT_ORANGE);
         pnlKiri.add(lblTitleKiri, "span 2, gapbottom 10");
 
@@ -95,14 +98,15 @@ public class FormNotaServis extends Form {
         pnlKiri.add(createTitleLabel("Nama Pelanggan")); pnlKiri.add(lblNama);
         pnlKiri.add(createTitleLabel("No. Telp / WA")); pnlKiri.add(lblTelepon);
         pnlKiri.add(createTitleLabel("Tipe Perangkat")); pnlKiri.add(lblPerangkat);
-        pnlKiri.add(createTitleLabel("Kelengkapan Bawaan"), "top, gaptop 3"); pnlKiri.add(txtKelengkapan, "growx, wmin 10");
+        pnlKiri.add(createTitleLabel("Kelengkapan Bawaan"), "aligny top, gaptop 2"); pnlKiri.add(txtKelengkapan, "growx, wmin 10");
         pnlKiri.add(createTitleLabel("Tanggal Masuk")); pnlKiri.add(lblTglMasuk);
 
-        JPanel pnlKanan = new JPanel(new MigLayout("wrap, fillx, insets 0", "[130!][0:0, grow, fill]", "[]15[][][][][]"));
+        // KOLOM KANAN
+        JPanel pnlKanan = new JPanel(new MigLayout("wrap, fillx, insets 0", "[140!][fill, grow]", "[]15[]12[]12[]12[]12[]"));
         pnlKanan.setOpaque(false);
 
         JLabel lblTitleKanan = new JLabel("DETAIL KERUSAKAN & TINDAKAN");
-        lblTitleKanan.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblTitleKanan.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTitleKanan.setForeground(ACCENT_ORANGE);
         pnlKanan.add(lblTitleKanan, "span 2, gapbottom 10");
 
@@ -112,9 +116,9 @@ public class FormNotaServis extends Form {
         lblTglSelesai = createDataLabel("-");
         lblTglAmbil = createDataLabel("-");
 
-        pnlKanan.add(createTitleLabel("Keluhan Awal"), "top, gaptop 3"); pnlKanan.add(txtKeluhan, "growx, wmin 10");
-        pnlKanan.add(createTitleLabel("Hasil Diagnosa"), "top, gaptop 3"); pnlKanan.add(txtDiagnosa, "growx, wmin 10");
-        pnlKanan.add(createTitleLabel("Tindakan Servis"), "top, gaptop 3"); pnlKanan.add(txtTindakan, "growx, wmin 10");
+        pnlKanan.add(createTitleLabel("Keluhan Awal"), "aligny top, gaptop 2"); pnlKanan.add(txtKeluhan, "growx, wmin 10");
+        pnlKanan.add(createTitleLabel("Hasil Diagnosa"), "aligny top, gaptop 2"); pnlKanan.add(txtDiagnosa, "growx, wmin 10");
+        pnlKanan.add(createTitleLabel("Tindakan Servis"), "aligny top, gaptop 2"); pnlKanan.add(txtTindakan, "growx, wmin 10");
         pnlKanan.add(createTitleLabel("Tanggal Selesai")); pnlKanan.add(lblTglSelesai);
         pnlKanan.add(createTitleLabel("Tanggal Diambil")); pnlKanan.add(lblTglAmbil);
 
@@ -122,24 +126,27 @@ public class FormNotaServis extends Form {
         panelGrid.add(pnlKanan, "top");
         pnlCetak.add(panelGrid, "growx");
 
+        // --- FINANSIAL & GARANSI ---
         JPanel panelFinansialTitle = new JPanel(new MigLayout("insets 0", "[]")); panelFinansialTitle.setOpaque(false);
         JLabel lblTitleFins = new JLabel("FINANSIAL & GARANSI");
-        lblTitleFins.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblTitleFins.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTitleFins.setForeground(ACCENT_ORANGE);
-        panelFinansialTitle.add(lblTitleFins, "gaptop 10, gapbottom 5");
+        panelFinansialTitle.add(lblTitleFins, "gaptop 15, gapbottom 5");
         pnlCetak.add(panelFinansialTitle, "growx");
 
-        cardFinansial = new JPanel(new MigLayout("wrap 2, fillx, insets 15", "[fill][right]", "[]8[]5[]12[]10[]"));
-        cardFinansial.setBackground(Color.WHITE);
-        cardFinansial.putClientProperty(FlatClientProperties.STYLE, "arc:15; border:1,solid,#f1f3f8");
+        // PERBAIKAN FINAL: Menggunakan pref! agar lebarnya fleksibel, dan memberi margin kanan ekstra.
+        cardFinansial = new JPanel(new MigLayout("wrap 2, fillx, insets 25 25 25 35", "[fill, grow][right, pref!]", "[]10[]5[]15[]10[]"));
+        cardFinansial.setBackground(new Color(248, 250, 252));
+        cardFinansial.putClientProperty(FlatClientProperties.STYLE, "border:1,solid,#f1f3f8");
         
-        cardFinansial.add(createTitleLabel("RINCIAN TRANSAKSI")); cardFinansial.add(createTitleLabel("TOTAL"), "right");
-        cardFinansial.add(new JSeparator(), "span 2, growx, gapy 2 5");
+        cardFinansial.add(createTitleLabel("RINCIAN TRANSAKSI")); cardFinansial.add(createTitleLabel("TOTAL"), "right, gapright 15");
+        cardFinansial.add(new JSeparator(), "span 2, growx, gapy 5 10");
         
         lblTitleJasa = createTitleLabel("Biaya Jasa Teknisi & Perbaikan"); lblValJasa = createDataLabel("Rp 0");
-        cardFinansial.add(lblTitleJasa); cardFinansial.add(lblValJasa);
+        cardFinansial.add(lblTitleJasa); cardFinansial.add(lblValJasa, "right, gapright 15");
         
-        pnlDaftarKomponen = new JPanel(new MigLayout("wrap 2, fillx, insets 0", "[fill, grow][right]", "[]2[]"));
+        // PERBAIKAN: Sub-panel daftar komponen juga diset pref!
+        pnlDaftarKomponen = new JPanel(new MigLayout("wrap 2, fillx, insets 0", "[fill, grow][right, pref!]", "[]4[]"));
         pnlDaftarKomponen.setOpaque(false);
         cardFinansial.add(pnlDaftarKomponen, "span 2, growx, gapy 5 5");
         
@@ -148,27 +155,27 @@ public class FormNotaServis extends Form {
         
         JPanel pnlGaransi = new JPanel(new MigLayout("insets 0", "[][]", "[]")); pnlGaransi.setOpaque(false);
         pnlGaransi.add(createTitleLabel("Masa Garansi Servis:")); pnlGaransi.add(lblGaransi);
-        cardFinansial.add(pnlGaransi, "gaptop 10"); 
+        cardFinansial.add(pnlGaransi, "gaptop 15"); 
         
         JPanel pnlBayar = new JPanel(new MigLayout("insets 0", "[][]", "[]")); pnlBayar.setOpaque(false);
         pnlBayar.add(createTitleLabel("Status Pembayaran:")); pnlBayar.add(lblStatusBayar);
-        cardFinansial.add(pnlBayar, "right");
+        cardFinansial.add(pnlBayar, "right, gapright 15, gaptop 15");
         
-        lblBiaya = new JLabel("Rp 0"); lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 28)); lblBiaya.setForeground(FINISH_GREEN); 
-        cardFinansial.add(new JSeparator(), "span 2, growx, gaptop 10");
+        lblBiaya = new JLabel("Rp 0"); lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 32)); lblBiaya.setForeground(FINISH_GREEN); 
+        cardFinansial.add(new JSeparator(), "span 2, growx, gaptop 15, gapbottom 10");
         
-        lblTitleTotalBayar = new JLabel("TOTAL PEMBAYARAN / ESTIMASI");
-        lblTitleTotalBayar.setFont(new Font("Segoe UI", Font.BOLD, 14)); 
+        lblTitleTotalBayar = new JLabel("TOTAL PEMBAYARAN");
+        lblTitleTotalBayar.setFont(new Font("Segoe UI", Font.BOLD, 15)); 
         lblTitleTotalBayar.setForeground(SIDEBAR_MAIN_COLOR);
-        cardFinansial.add(lblTitleTotalBayar, "gaptop 5"); 
-        cardFinansial.add(lblBiaya, "right, gaptop 5");
+        cardFinansial.add(lblTitleTotalBayar, "aligny center"); 
+        cardFinansial.add(lblBiaya, "right, gapright 15, aligny center");
         
         pnlCetak.add(cardFinansial, "growx, gaptop 10");
 
         JLabel lblFooterNB = new JLabel("NB: Nota ini adalah bukti resmi transaksi servis di Cheerful People Service Center.");
         lblFooterNB.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblFooterNB.setForeground(TEXT_MUTED);
-        pnlCetak.add(lblFooterNB, "center, gaptop 10");
+        pnlCetak.add(lblFooterNB, "center, gaptop 20");
 
         JScrollPane scrollCetak = UIHelper.createCustomScroll(pnlCetak);
         scrollCetak.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -186,20 +193,20 @@ public class FormNotaServis extends Form {
         btnRefresh.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefresh.setBackground(ACCENT_ORANGE);
         btnRefresh.setForeground(Color.WHITE);
-        btnRefresh.putClientProperty(FlatClientProperties.STYLE, "arc:999; borderWidth:0; focusWidth:0; margin:8,30,8,30"); 
+        btnRefresh.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderWidth:0; focusWidth:0; margin:10,25,10,25"); 
 
         JButton btnCetak = new JButton("Cetak / Simpan PDF");
         btnCetak.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnCetak.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnCetak.setBackground(SIDEBAR_MAIN_COLOR);
+        btnCetak.setBackground(FINISH_GREEN); 
         btnCetak.setForeground(Color.WHITE);
-        btnCetak.putClientProperty(FlatClientProperties.STYLE, "arc:999; borderWidth:0; focusWidth:0; margin:8,30,8,30"); 
+        btnCetak.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderWidth:0; focusWidth:0; margin:10,25,10,25"); 
 
         btnRefresh.addActionListener(e -> loadDataNota());
         btnCetak.addActionListener(e -> cetakKePDF());
 
-        p.add(btnRefresh, "height 40!, gapright 10");
-        p.add(btnCetak, "height 40!");
+        p.add(btnRefresh, "height 45!, gapright 10");
+        p.add(btnCetak, "height 45!");
         return p;
     }
 
@@ -227,7 +234,6 @@ public class FormNotaServis extends Form {
         return ta;
     }
 
-    // --- BLOK KODE YANG DIPERBARUI MULAI DI SINI ---
     private void cetakKePDF() {
         if (idNotaUntukDicetak.isEmpty()) { 
             UIHelper.tampilkanNotif(this, "Peringatan", "Data nota belum termuat!", "warning"); 
@@ -235,38 +241,27 @@ public class FormNotaServis extends Form {
         }
 
         try {
-            // 1. TRIK DUMMY FRAME: Lepas pnlCetak dari UI sementara agar ukurannya bisa di-render utuh
-            JFrame dummyFrame = new JFrame();
-            dummyFrame.setUndecorated(true);
-            
-            JPanel wrapper = new JPanel(new BorderLayout());
-            wrapper.setBackground(Color.WHITE);
-            wrapper.add(pnlCetak, BorderLayout.CENTER);
-            dummyFrame.add(wrapper);
-            
-            // Set ukuran panjang agar semua teks (keluhan, diagnosa, part) muat sebelum dihitung
-            wrapper.setSize(595, 2000); 
-            dummyFrame.pack(); 
-
-            // Hitung tinggi aslinya, minimal setinggi kertas A4 (842)
-            int actualHeight = wrapper.getPreferredSize().height;
-            wrapper.setSize(595, Math.max(842, actualHeight));
-            dummyFrame.pack();
-
-            // 2. PROSES CETAK PDF
             PrinterJob job = PrinterJob.getPrinterJob();
             job.setJobName("Nota_Servis_" + idNotaUntukDicetak);
 
             PageFormat pf = job.defaultPage();
             Paper paper = pf.getPaper();
-            // Margin aman agar tidak error di driver Windows
-            double margin = 15;
-            paper.setImageableArea(margin, margin, paper.getWidth() - (margin * 2), paper.getHeight() - (margin * 2));
+
+            double margin = 15; 
+            paper.setSize(595, 842); // Ukuran A4
+            paper.setImageableArea(margin, margin, 595 - (margin * 2), 842 - (margin * 2));
             pf.setPaper(paper);
             pf.setOrientation(PageFormat.PORTRAIT);
             
-            // MANTRA WAJIB
             pf = job.validatePage(pf);
+
+            Dimension originalSize = pnlCetak.getSize();
+            Dimension prefSize = pnlCetak.getPreferredSize();
+            
+            // Melebarkan virtual canvas sedikit lebih besar dari teksnya
+            int virtualWidth = Math.max(860, prefSize.width);
+            pnlCetak.setSize(virtualWidth, prefSize.height + 50);
+            pnlCetak.doLayout();
 
             job.setPrintable((graphics, pageFormat, pageIndex) -> {
                 if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
@@ -274,46 +269,34 @@ public class FormNotaServis extends Form {
                 Graphics2D g2d = (Graphics2D) graphics;
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
                 
-                // SKALA OTOMATIS: Memastikan panel muat di PDF
-                double scaleX = pageFormat.getImageableWidth() / wrapper.getWidth();
-                double scaleY = pageFormat.getImageableHeight() / wrapper.getHeight();
+                double scaleX = pageFormat.getImageableWidth() / pnlCetak.getWidth();
+                double scaleY = pageFormat.getImageableHeight() / pnlCetak.getHeight();
                 double scale = Math.min(scaleX, scaleY);
                 
+                if (scale > 1.0) {
+                    scale = 1.0; 
+                }
+                
                 g2d.scale(scale, scale);
-                wrapper.printAll(g2d);
+                pnlCetak.printAll(g2d);
                 
                 return Printable.PAGE_EXISTS;
             }, pf);
 
-            // BUKA DIALOG PRINT WINDOWS
             if (job.printDialog()) {
-                try {
-                    job.print();
-                    UIHelper.tampilkanNotif(this, "Sukses", "Nota berhasil dicetak/disimpan sebagai PDF!", "success");
-                } catch (PrinterException ex) {
-                    UIHelper.tampilkanNotif(this, "Error Cetak", "Gagal: " + ex.getMessage(), "error");
-                }
+                job.print();
+                UIHelper.tampilkanNotif(this, "Sukses", "Nota berhasil dicetak/disimpan sebagai PDF!", "success");
             }
 
-            // 3. KEMBALIKAN TAMPILAN KE NORMAL
-            dummyFrame.dispose();
-            
-            // Rekonstruksi ulang panel ke dalam FormNotaServis agar tidak hilang dari layar
-            this.removeAll();
-            JScrollPane scrollCetak = UIHelper.createCustomScroll(pnlCetak);
-            scrollCetak.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            this.add(scrollCetak, "grow, wmin 0");
-            this.add(createFooterPanel(), "left, gaptop 15");
-            
-            this.revalidate();
-            this.repaint();
+            pnlCetak.setSize(originalSize);
+            pnlCetak.revalidate();
+            pnlCetak.repaint();
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Gagal memproses cetak PDF: \n" + ex.getMessage(), "Error Print", JOptionPane.ERROR_MESSAGE);
+            UIHelper.tampilkanNotif(this, "Error Print", "Gagal memproses cetak PDF: \n" + ex.getMessage(), "error");
         }
     }
-    // --- BLOK KODE YANG DIPERBARUI SELESAI DI SINI ---
 
     private void loadDataNota() {
         String idNota = FormManager.getLoggedInUser();
@@ -357,7 +340,7 @@ public class FormNotaServis extends Form {
                             dbGaransi = res.getString("masa_garansi");
                             
                             String statusLengkap = res.getString("status");
-                            if ("Selesai".equalsIgnoreCase(statusLengkap)) {
+                            if ("Selesai".equalsIgnoreCase(statusLengkap) || "Diambil".equalsIgnoreCase(statusLengkap)) {
                                 if (dbTglAmbil != null && !dbTglAmbil.trim().isEmpty()) {
                                     dbStatusBayar = "Telah Diambil / " + (dbStatusBayar != null ? dbStatusBayar : "Lunas");
                                 } else {
@@ -410,11 +393,11 @@ public class FormNotaServis extends Form {
                         lblValJasa.setText(formatRp.format(dbJasa).replace(",00", ""));
                         
                         pnlDaftarKomponen.removeAll();
-                        pnlDaftarKomponen.add(createTitleLabel("Penggantian Komponen:"), "span 2");
+                        pnlDaftarKomponen.add(createTitleLabel("Penggantian Komponen:"), "span 2, gapbottom 5");
                         
                         if (listParts.isEmpty()) {
                             JLabel lblKosong = new JLabel("   - Tidak ada part yang diganti");
-                            lblKosong.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                            lblKosong.setFont(new Font("Segoe UI", Font.ITALIC, 13));
                             lblKosong.setForeground(TEXT_MUTED);
                             pnlDaftarKomponen.add(lblKosong, "span 2");
                         } else {
@@ -423,14 +406,15 @@ public class FormNotaServis extends Form {
                                 String hargaPart = formatRp.format(Double.parseDouble(part[2])).replace(",00", "");
 
                                 JLabel lblNm = new JLabel(namaPart);
-                                lblNm.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                lblNm.setForeground(new Color(100, 100, 110));
+                                lblNm.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                lblNm.setForeground(SIDEBAR_MAIN_COLOR);
 
                                 JLabel lblHg = new JLabel(hargaPart);
-                                lblHg.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                lblHg.setFont(new Font("Segoe UI", Font.BOLD, 13));
                                 lblHg.setForeground(SIDEBAR_MAIN_COLOR);
 
-                                pnlDaftarKomponen.add(lblNm); pnlDaftarKomponen.add(lblHg);
+                                // PERBAIKAN: Menambahkan margin kanan (gapright 15) agar tidak terpotong
+                                pnlDaftarKomponen.add(lblNm); pnlDaftarKomponen.add(lblHg, "right, gapright 15");
                             }
                         }
                         pnlDaftarKomponen.revalidate(); pnlDaftarKomponen.repaint();
@@ -451,19 +435,19 @@ public class FormNotaServis extends Form {
 
                         if (dbGaransi == null || dbGaransi.isEmpty()) {
                             lblGaransi.setText("Belum Ditentukan"); lblGaransi.setForeground(SIDEBAR_MAIN_COLOR);
-                        } else if (dbGaransi.equalsIgnoreCase("Tidak Garansi")) {
-                            lblGaransi.setText(dbGaransi); lblGaransi.setForeground(ERROR_RED);
+                        } else if (dbGaransi.equalsIgnoreCase("Tidak Garansi") || dbGaransi.equals("-")) {
+                            lblGaransi.setText("Tidak Garansi"); lblGaransi.setForeground(ERROR_RED);
                         } else {
                             lblGaransi.setText(dbGaransi); lblGaransi.setForeground(FINISH_GREEN);
                         }
                         
                         if (dbBiaya == 0 && (dbStatusBayar == null || !dbStatusBayar.contains("Lunas"))) {
-                            lblBiaya.setText("Menunggu Kalkulasi");
-                            lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 18)); 
+                            lblBiaya.setText("Rp 0");
+                            lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 20)); 
                             lblBiaya.setForeground(ACCENT_ORANGE);
                         } else {
                             lblBiaya.setText(formatRp.format(dbBiaya).replace(",00", ""));
-                            lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 28));
+                            lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 32));
                             lblBiaya.setForeground(FINISH_GREEN);
                         }
                     } else {

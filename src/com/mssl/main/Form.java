@@ -5,7 +5,7 @@ import javax.swing.LookAndFeel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-public class Form extends JPanel{
+public abstract class Form extends JPanel {
     
     private LookAndFeel oldTheme = UIManager.getLookAndFeel();
     

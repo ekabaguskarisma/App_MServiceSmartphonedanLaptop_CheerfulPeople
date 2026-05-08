@@ -10,7 +10,7 @@ import net.miginfocom.swing.MigLayout;
 
 public class UIHelper {
     
-    // 1. FUNGSI NOTIFIKASI TIKET
+    // 1. FUNGSI NOTIFIKASI 
     public static void tampilkanNotif(Component parent, String title, String message, String type) {
         final String bgColor = type.equals("success") ? "#27ae60" : (type.equals("warning") ? "#ff8200" : "#e74c3c");
         String iconName = type.equals("success") ? "success.svg" : "error.svg";
