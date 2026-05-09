@@ -44,7 +44,7 @@ public class DialogDetailNota extends JDialog {
     private int idServis;
 
     public DialogDetailNota(JFrame parent, String idNota) {
-        super(parent, "Detail & Cetak Kwitansi", true); 
+        super(parent, "Detail & Cetak Nota", true); 
         this.idNota = idNota;
         try { this.idServis = Integer.parseInt(idNota.replaceAll("[^0-9]", "")); } 
         catch (Exception e) { this.idServis = 0; }
@@ -54,10 +54,10 @@ public class DialogDetailNota extends JDialog {
     }
 
     private void initUI() {
-        setSize(850, 750); 
+        setSize(850, 780); // Tinggi sedikit ditambah agar lebih lega
         setLocationRelativeTo(getParent());
         setResizable(true);
-        setLayout(new BorderLayout());
+        setLayout(new MigLayout("insets 0, fill", "[grow]", "[grow, fill][]")); // MigLayout untuk main content
         getContentPane().setBackground(new Color(245, 245, 248));
 
         pnlCetak = new JPanel(new MigLayout("wrap, fillx, insets 40", "[fill, grow]", "[]15[]25[]25[]"));
@@ -139,33 +139,47 @@ public class DialogDetailNota extends JDialog {
         panelFinansialTitle.add(lblTitleFins, "gaptop 15, gapbottom 5");
         pnlCetak.add(panelFinansialTitle, "growx");
 
-        // PERBAIKAN PADA KOLOM KANAN: Menggunakan [right, pref!] agar lebarnya pakem sesuai teks harga dan padding kanan ditambah jadi 35
-        cardFinansial = new JPanel(new MigLayout("wrap 2, fillx, insets 25 25 25 35", "[fill, grow][right, pref!]", "[]10[]5[]15[]10[]"));
+        // KOLOM KANAN DIKUNCI AGAR HARGA TIDAK TERPOTONG
+        cardFinansial = new JPanel(new MigLayout("wrap 2, fillx, insets 25 30 25 30", "[fill, grow][fill, 250!]", "[]10[]5[]15[]10[]"));
         cardFinansial.setBackground(new Color(248, 250, 252));
         cardFinansial.putClientProperty(FlatClientProperties.STYLE, "border:1,solid,#f1f3f8");
         
-        cardFinansial.add(createTitleLabel("RINCIAN TRANSAKSI")); cardFinansial.add(createTitleLabel("TOTAL"));
+        JLabel lblTeksTotal = createTitleLabel("TOTAL");
+        lblTeksTotal.setHorizontalAlignment(SwingConstants.RIGHT);
+        lblTeksTotal.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10)); 
+        
+        cardFinansial.add(createTitleLabel("RINCIAN TRANSAKSI")); 
+        cardFinansial.add(lblTeksTotal);
         cardFinansial.add(new JSeparator(), "span 2, growx, gapy 5 10");
         
-        lblTitleJasa = createTitleLabel("Biaya Jasa Teknisi & Perbaikan"); lblValJasa = createDataLabel("Rp 0");
+        lblTitleJasa = createTitleLabel("Biaya Jasa Teknisi & Perbaikan"); 
+        lblValJasa = createDataLabel("Rp 0");
+        lblValJasa.setHorizontalAlignment(SwingConstants.RIGHT);
+        lblValJasa.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        
         cardFinansial.add(lblTitleJasa); cardFinansial.add(lblValJasa);
         
-        // Perbaikan Sub-Panel Komponen
-        pnlDaftarKomponen = new JPanel(new MigLayout("wrap 2, fillx, insets 0", "[fill, grow][right, pref!]", "[]4[]"));
+        pnlDaftarKomponen = new JPanel(new MigLayout("wrap 2, fillx, insets 0", "[fill, grow][fill, 200!]", "[]4[]"));
         pnlDaftarKomponen.setOpaque(false);
         cardFinansial.add(pnlDaftarKomponen, "span 2, growx, gapy 5 5");
         
         lblGaransi = createDataLabel("-"); lblStatusBayar = createDataLabel("-");
+        lblStatusBayar.setHorizontalAlignment(SwingConstants.RIGHT);
         
         JPanel pnlGaransi = new JPanel(new MigLayout("insets 0", "[][]", "[]")); pnlGaransi.setOpaque(false);
         pnlGaransi.add(createTitleLabel("Masa Garansi Servis:")); pnlGaransi.add(lblGaransi);
         cardFinansial.add(pnlGaransi, "gaptop 15"); 
         
-        JPanel pnlBayar = new JPanel(new MigLayout("insets 0", "[][]", "[]")); pnlBayar.setOpaque(false);
+        JPanel pnlBayar = new JPanel(new MigLayout("insets 0, fillx", "[grow, right][]", "[]")); pnlBayar.setOpaque(false);
         pnlBayar.add(createTitleLabel("Status Pembayaran:")); pnlBayar.add(lblStatusBayar);
+        pnlBayar.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
         cardFinansial.add(pnlBayar, "gaptop 15");
         
-        lblBiaya = new JLabel("Rp 0"); lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 32)); lblBiaya.setForeground(FINISH_GREEN); 
+        lblBiaya = new JLabel("Rp 0"); 
+        lblBiaya.setFont(new Font("Segoe UI", Font.BOLD, 32)); 
+        lblBiaya.setForeground(FINISH_GREEN); 
+        lblBiaya.setHorizontalAlignment(SwingConstants.RIGHT);
+        lblBiaya.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10)); 
         cardFinansial.add(new JSeparator(), "span 2, growx, gaptop 15, gapbottom 10");
         
         lblTitleTotalBayar = new JLabel("TOTAL PEMBAYARAN");
@@ -181,7 +195,7 @@ public class DialogDetailNota extends JDialog {
         lblFooterNB.setForeground(TEXT_MUTED);
         pnlCetak.add(lblFooterNB, "center, gaptop 20");
 
-        // MEMASUKKAN KE SCROLLPANE
+        // MEMASUKKAN KE SCROLLPANE (KONTEN UTAMA)
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         wrapper.setOpaque(false);
@@ -189,26 +203,31 @@ public class DialogDetailNota extends JDialog {
         
         JScrollPane scrollPane = UIHelper.createCustomScroll(wrapper);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        add(scrollPane, BorderLayout.CENTER);
+        
+        // TAMBAHKAN SCROLLPANE KE LAYOUT UTAMA
+        add(scrollPane, "grow");
 
-        // --- PANEL TOMBOL BAWAH ---
-        JPanel pnlBottom = new JPanel(new MigLayout("insets 15 20 15 20, fillx", "[grow, right]", "[]"));
+        // --- PANEL TOMBOL BAWAH (STICKY FOOTER) ---
+        // Desain baru: Rata kanan-kiri yang rapi dengan padding pas
+        JPanel pnlBottom = new JPanel(new MigLayout("insets 15 30 15 30, fillx", "[grow][grow, right]", "[]"));
         pnlBottom.setBackground(Color.WHITE);
         pnlBottom.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 235)));
 
-        JButton btnTutup = new JButton("Tutup");
+        JButton btnTutup = new JButton("Kembali");
         btnTutup.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnTutup.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#e2e8f0; foreground:#333333; font:bold +1; padding:10,25,10,25; borderWidth:0");
+        btnTutup.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:#e2e8f0; foreground:#333333; font:bold +1; padding:12,30,12,30; borderWidth:0");
         btnTutup.addActionListener(e -> dispose());
 
         JButton btnCetak = new JButton("Cetak / Simpan PDF");
         btnCetak.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnCetak.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", FINISH_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; padding:10,25,10,25; borderWidth:0");
+        btnCetak.putClientProperty(FlatClientProperties.STYLE, "arc:10; background:" + String.format("#%06x", FINISH_GREEN.getRGB() & 0xFFFFFF) + "; foreground:#ffffff; font:bold +1; padding:12,35,12,35; borderWidth:0");
         btnCetak.addActionListener(e -> cetakKePDF());
 
-        pnlBottom.add(btnTutup, "gapright 10");
-        pnlBottom.add(btnCetak);
-        add(pnlBottom, BorderLayout.SOUTH);
+        pnlBottom.add(btnTutup); // Taruh di kiri
+        pnlBottom.add(btnCetak); // Taruh di kanan
+        
+        // TAMBAHKAN FOOTER KE LAYOUT BAWAH
+        add(pnlBottom, "dock south");
     }
 
     private JLabel createTitleLabel(String text) {
@@ -248,8 +267,8 @@ public class DialogDetailNota extends JDialog {
             Dimension originalSize = pnlCetak.getSize();
             Dimension prefSize = pnlCetak.getPreferredSize();
             
-            int virtualWidth = Math.max(800, prefSize.width);
-            pnlCetak.setSize(virtualWidth, prefSize.height);
+            int virtualWidth = Math.max(900, prefSize.width);
+            pnlCetak.setSize(virtualWidth, prefSize.height + 50);
             pnlCetak.doLayout();
 
             job.setPrintable((graphics, pageFormat, pageIndex) -> {
@@ -392,8 +411,11 @@ public class DialogDetailNota extends JDialog {
                                 JLabel lblHg = new JLabel(hargaPart);
                                 lblHg.setFont(new Font("Segoe UI", Font.BOLD, 13));
                                 lblHg.setForeground(SIDEBAR_MAIN_COLOR);
+                                lblHg.setHorizontalAlignment(SwingConstants.RIGHT);
+                                lblHg.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10)); // BANTALAN AMAN
 
-                                pnlDaftarKomponen.add(lblNm); pnlDaftarKomponen.add(lblHg);
+                                pnlDaftarKomponen.add(lblNm); 
+                                pnlDaftarKomponen.add(lblHg);
                             }
                         }
                         pnlDaftarKomponen.revalidate(); pnlDaftarKomponen.repaint();
@@ -403,13 +425,10 @@ public class DialogDetailNota extends JDialog {
                         
                         if (dbStatusBayar == null || dbStatusBayar.isEmpty()) {
                             lblStatusBayar.setText("Belum Lunas"); lblStatusBayar.setForeground(ERROR_RED);
-                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI");
                         } else if (dbStatusBayar.contains("Lunas") || dbStatusBayar.contains("Diambil") || dbStatusBayar.contains("Tunai") || dbStatusBayar.contains("Transfer")) {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(FINISH_GREEN);
-                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN");
                         } else {
                             lblStatusBayar.setText(dbStatusBayar); lblStatusBayar.setForeground(ERROR_RED);
-                            lblTitleTotalBayar.setText("TOTAL PEMBAYARAN / ESTIMASI");
                         }
 
                         if (dbGaransi == null || dbGaransi.isEmpty()) {
