@@ -62,6 +62,15 @@ public class FormDataPelanggan extends Form {
         txtNama.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Masukkan Nama Lengkap");
         txtNama.putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
         txtNama.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:5,10,5,10");
+        txtNama.addKeyListener(new KeyAdapter() {
+            public void keyTyped(KeyEvent evt) {
+                char c = evt.getKeyChar();
+                if (!Character.isLetter(c) && !Character.isWhitespace(c) && c != '.' && c != ',' && c != '\'') {
+                    evt.consume();
+                    Toolkit.getDefaultToolkit().beep();
+                }
+            }
+        });
 
         txtWa = new JTextField();
         txtWa.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Contoh: 081234567890");
@@ -99,9 +108,9 @@ public class FormDataPelanggan extends Form {
 
         Font fontLabel = new Font("Segoe UI", Font.BOLD, 13);
         panelForm.add(lblTitleForm);
-        panelForm.add(new JLabel("Nama Lengkap") {{ setFont(fontLabel); setForeground(TEXT_MUTED); }});
+        panelForm.add(new JLabel("Nama Pelanggan") {{ setFont(fontLabel); setForeground(TEXT_MUTED); }});
         panelForm.add(txtNama, "h 38!"); 
-        panelForm.add(new JLabel("No. WhatsApp") {{ setFont(fontLabel); setForeground(TEXT_MUTED); }});
+        panelForm.add(new JLabel("No. Handphone / WhatsApp") {{ setFont(fontLabel); setForeground(TEXT_MUTED); }});
         panelForm.add(txtWa, "h 38!");
         panelForm.add(new JLabel("Alamat Lengkap") {{ setFont(fontLabel); setForeground(TEXT_MUTED); }});
         panelForm.add(scrollAlamat, "h 120!");
@@ -288,21 +297,19 @@ public class FormDataPelanggan extends Form {
 
         try {
             Connection kon = DatabaseConnection.getKoneksiTransaksi();
+            
             if (selectedId.isEmpty()) {
-                String sqlCek = "SELECT id_pelanggan FROM data_pelanggan WHERE no_whatsapp = ?";
+                String sqlCek = "SELECT id_pelanggan, nama_pelanggan FROM data_pelanggan WHERE no_whatsapp = ?";
                 try (PreparedStatement psCek = kon.prepareStatement(sqlCek)) {
                     psCek.setString(1, wa);
                     try (ResultSet rs = psCek.executeQuery()) {
                         if (rs.next()) {
-                            int idExisting = rs.getInt("id_pelanggan");
-                            String sqlUpdate = "UPDATE data_pelanggan SET nama_pelanggan = ?, alamat = ? WHERE id_pelanggan = ?";
-                            try (PreparedStatement psUpdate = kon.prepareStatement(sqlUpdate)) {
-                                psUpdate.setString(1, nama); psUpdate.setString(2, alamat); psUpdate.setInt(3, idExisting);
-                                if (psUpdate.executeUpdate() > 0) {
-                                    UIHelper.tampilkanNotif(this, "Berhasil", "Nomor WA sudah terdaftar. Data pelanggan berhasil diperbarui!", "success");
-                                }
-                            }
+                            
+                            String namaPemilikLama = rs.getString("nama_pelanggan");
+                            UIHelper.tampilkanNotif(this, "Gagal Simpan", 
+                                "Nomor WA sudah terdaftar atas nama: " + namaPemilikLama + "!\n .Silakan gunakan data tersebut atau masukkan nomor WA lain.", "error");
                         } else {
+                            
                             String sqlInsert = "INSERT INTO data_pelanggan (nama_pelanggan, no_whatsapp, alamat) VALUES (?, ?, ?)";
                             try (PreparedStatement psInsert = kon.prepareStatement(sqlInsert)) {
                                 psInsert.setString(1, nama); psInsert.setString(2, wa); psInsert.setString(3, alamat);
@@ -314,10 +321,24 @@ public class FormDataPelanggan extends Form {
                     }
                 }
             } else {
+                String sqlCekUpdate = "SELECT id_pelanggan FROM data_pelanggan WHERE no_whatsapp = ? AND id_pelanggan != ?";
+                try (PreparedStatement psCekUpd = kon.prepareStatement(sqlCekUpdate)) {
+                    psCekUpd.setString(1, wa);
+                    psCekUpd.setString(2, selectedId);
+                    try (ResultSet rsUpd = psCekUpd.executeQuery()) {
+                        if (rsUpd.next()) {
+                            UIHelper.tampilkanNotif(this, "Gagal Update", "Nomor WA tersebut sudah dipakai oleh pelanggan lain!", "error");
+                            return;
+                        }
+                    }
+                }
+                
                 String sql = "UPDATE data_pelanggan SET nama_pelanggan=?, no_whatsapp=?, alamat=? WHERE id_pelanggan=?";
                 try (PreparedStatement ps = kon.prepareStatement(sql)) {
                     ps.setString(1, nama); ps.setString(2, wa); ps.setString(3, alamat); ps.setString(4, selectedId);
-                    if (ps.executeUpdate() > 0) UIHelper.tampilkanNotif(this, "Diperbarui", "Data pelanggan berhasil diupdate!", "success");
+                    if (ps.executeUpdate() > 0) {
+                        UIHelper.tampilkanNotif(this, "Diperbarui", "Data pelanggan berhasil diupdate!", "success");
+                    }
                 }
             }
             

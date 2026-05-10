@@ -116,7 +116,7 @@ public class UIHelper {
         ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(SwingConstants.LEFT);
     }
     
-    // 5. CLASS RENDERER TEXT WRAP (AUTO ENTER DI TABEL)
+    // 5. CLASS RENDERER TEXT WRAP
     public static class WrapTextRenderer extends JTextArea implements javax.swing.table.TableCellRenderer {
         public WrapTextRenderer() {
             setLineWrap(true); 
